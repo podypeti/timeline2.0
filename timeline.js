@@ -249,8 +249,8 @@ function draw() {
 
     ctx.clearRect(0, 0, W, H);
 
-    const timelineY = H * 0.15;
-    const rowHeight = 38;
+    const timelineY = Math.min(80, H * 0.08); // keep the timeline nearer the top, max 80px
+    const rowHeight = 32;                      // slightly reduced row height
 
     if (!events || events.length === 0) {
         ctx.fillStyle = "#000";
@@ -343,10 +343,10 @@ function draw() {
     }
 
     // ---------------------
-    // Draw event rows
+    // Draw event rows (updated rendering)
     // ---------------------
     rows.forEach((row, i) => {
-        let y = timelineY + 40 + i * rowHeight;
+        let y = timelineY + 36 + i * rowHeight; // smaller offset from timeline line
 
         row.forEach(ev => {
             const x1 = xOfTs(ev.start);
@@ -360,23 +360,77 @@ function draw() {
             let left = Math.min(x1, x2);
             let right = Math.max(x1, x2);
 
-            const width = Math.max(2, right - left);
+            const rawWidth = right - left;
+            const minVisualWidth = 10; // show something readable for short events
+            const width = Math.max(2, rawWidth);
 
-            ctx.fillStyle = color;
-            ctx.fillRect(left, y, width, 20);
+            // If the event is effectively a point (start === end or very small),
+            // draw a circular marker and label to the right.
+            if (rawWidth < minVisualWidth) {
+                const cx = (x1 + x2) / 2;
+                const r = 6; // marker radius
+                // marker
+                ctx.beginPath();
+                ctx.fillStyle = color;
+                ctx.arc(cx, y + 10, r, 0, Math.PI * 2);
+                ctx.fill();
 
-            ctx.fillStyle = "#000";
-            ctx.font = "12px Arial";
-            const textX = left + 4;
-            const textY = y + 15;
-            ctx.save();
-            ctx.beginPath();
-            ctx.rect(left, y, width, 20);
-            ctx.clip();
-            ctx.fillText(ev.title || "", textX, textY);
-            ctx.restore();
+                // small pill background for title (so text contrasts)
+                const label = ev.title || "";
+                ctx.font = "12px Arial";
+                const paddingX = 6;
+                const paddingY = 4;
+                const textWidth = ctx.measureText(label).width;
+                const pillW = Math.min(220, textWidth + paddingX * 2);
+                const pillH = 18;
+                const pillX = cx + r + 8;
+                const pillY = y + 10 - pillH / 2;
+
+                ctx.fillStyle = "#ffffffcc";
+                ctx.strokeStyle = "#00000022";
+                ctx.lineWidth = 1;
+                // draw rounded rect (simple)
+                roundRect(ctx, pillX, pillY, pillW, pillH, 6, true, false);
+                // text
+                ctx.fillStyle = "#000";
+                ctx.fillText(label, pillX + paddingX, pillY + pillH - paddingY - 2);
+            } else {
+                // normal bar for multi-day/long events
+                const drawLeft = left;
+                const drawWidth = Math.max(6, rawWidth); // enforce minimum readable width
+
+                ctx.fillStyle = color;
+                ctx.fillRect(drawLeft, y, drawWidth, 20);
+
+                // label clipped to bar area
+                ctx.fillStyle = "#000";
+                ctx.font = "12px Arial";
+                const textX = drawLeft + 6;
+                const textY = y + 15;
+                ctx.save();
+                ctx.beginPath();
+                ctx.rect(drawLeft, y, drawWidth, 20);
+                ctx.clip();
+                ctx.fillText(ev.title || "", textX, textY);
+                ctx.restore();
+            }
         });
     });
+}
+
+// Utility: rounded rect helper (add near top-level functions)
+// Call signature: roundRect(ctx, x, y, w, h, r, fill, stroke)
+function roundRect(ctx, x, y, w, h, r, fill, stroke) {
+    if (typeof r === "undefined") r = 5;
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+    if (fill) ctx.fill();
+    if (stroke) ctx.stroke();
 }
 
 // -------------------------

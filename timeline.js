@@ -45,8 +45,9 @@ fetch("timeline-data.csv")
 
 // -------------------------
 // CSV PARSER
-// Expected columns: Title, Start, End, Type
-// - returns normalized events: { title, start:Number, end:Number, type }
+// Expected header (examples):
+// Year,Month,Day,Time,End Year,End Month,End Day,End Time,Display Date,Headline,Text,Media,Media Credit,Media Caption,Media Thumbnail,Type,Group,Background
+// This parser will build start/end timestamps (ms) and normalize fields.
 // -------------------------
 function csvSplit(line) {
     // Simple CSV splitter that respects double quotes
@@ -72,6 +73,29 @@ function csvSplit(line) {
     }
     parts.push(cur);
     return parts;
+}
+
+function parseTimeString(timeStr) {
+    // timeStr like "HH:MM" or "HH:MM:SS" or empty
+    if (!timeStr) return [0,0,0];
+    const parts = timeStr.split(":").map(p => parseInt(p,10));
+    const h = isNaN(parts[0]) ? 0 : parts[0];
+    const m = isNaN(parts[1]) ? 0 : parts[1] || 0;
+    const s = isNaN(parts[2]) ? 0 : parts[2] || 0;
+    return [h,m,s];
+}
+
+function toTimestampFromParts(year, month, day, timeStr) {
+    // month: 1-12 or empty -> default 1 (January)
+    // day: 1-31 or empty -> default 1
+    // returns ms since epoch (UTC)
+    if (isNaN(year) || year === null) return NaN;
+    const y = parseInt(year, 10);
+    const mo = (isNaN(parseInt(month,10)) ? 1 : parseInt(month,10));
+    const d = (isNaN(parseInt(day,10)) ? 1 : parseInt(day,10));
+    const [h,m,s] = parseTimeString(timeStr);
+    // Use UTC so rendering is consistent across timezones
+    return Date.UTC(y, Math.max(0, mo - 1), Math.max(1, d), h, m, s);
 }
 
 function parseCSV(text) {
@@ -106,37 +130,60 @@ function parseCSV(text) {
             norm[k] = v;
         });
 
-        // extract fields with case-insensitive keys
-        const title = norm.title || norm.name || "";
-        let start = parseFloat(norm.start);
-        let end = parseFloat(norm.end);
+        // extract common fields (headline/title variations)
+        const title = norm.headline || norm.title || norm.name || "";
         const type = norm.type || "";
+        const media = norm.media || "";
+        const textField = norm.text || norm['display date'] || "";
 
-        if (isNaN(start) && norm.year) {
-            // fallback if CSV used a single "Year" column
-            start = parseFloat(norm.year);
+        // parse start date from Year/Month/Day/Time
+        const year = parseInt(norm.year, 10);
+        const month = norm.month;
+        const day = norm.day;
+        const timeStr = norm.time || norm['time'] || "";
+
+        let startTs = toTimestampFromParts(year, month, day, timeStr);
+
+        // parse end date (End Year etc) - if missing, use start
+        const endYear = parseInt(norm['end year'], 10);
+        let endTs = NaN;
+        if (!isNaN(endYear)) {
+            const endMonth = norm['end month'];
+            const endDay = norm['end day'];
+            const endTimeStr = norm['end time'] || "";
+            endTs = toTimestampFromParts(endYear, endMonth, endDay, endTimeStr);
         }
-        if (isNaN(end)) {
-            // if end missing, treat as point event
-            end = start;
+
+        if (isNaN(startTs)) {
+            // fallback: some CSVs might have a single "start" column with full date
+            const singleStart = norm.start || norm['start date'] || norm['display date'];
+            if (singleStart) {
+                const d = new Date(singleStart);
+                if (!isNaN(d)) startTs = d.getTime();
+            }
         }
-        if (isNaN(start)) {
+
+        if (isNaN(startTs)) {
             // cannot parse start — skip row
             continue;
         }
+        if (isNaN(endTs)) endTs = startTs;
 
         // ensure start <= end
-        if (end < start) {
-            const tmp = start;
-            start = end;
-            end = tmp;
+        if (endTs < startTs) {
+            const tmp = startTs;
+            startTs = endTs;
+            endTs = tmp;
         }
 
         out.push({
             title: title,
-            start: start,
-            end: end,
-            type: type
+            start: startTs,
+            end: endTs,
+            type: type,
+            media: media,
+            text: textField,
+            raw: norm
         });
     }
 
@@ -212,11 +259,11 @@ function draw() {
         return;
     }
 
-    // find min/max years
-    let minYear = Math.min(...events.map(e => e.start));
-    let maxYear = Math.max(...events.map(e => e.end));
+    // find min/max timestamps
+    let minTs = Math.min(...events.map(e => e.start));
+    let maxTs = Math.max(...events.map(e => e.end));
 
-    if (!isFinite(minYear) || !isFinite(maxYear)) {
+    if (!isFinite(minTs) || !isFinite(maxTs)) {
         ctx.fillStyle = "#000";
         ctx.font = "14px Arial";
         ctx.fillText("Invalid event dates", 10, 30);
@@ -224,12 +271,12 @@ function draw() {
     }
 
     // protect against zero span
-    if (minYear === maxYear) {
-        minYear = minYear - 1;
-        maxYear = maxYear + 1;
+    if (minTs === maxTs) {
+        minTs -= 24 * 3600 * 1000; // one day
+        maxTs += 24 * 3600 * 1000;
     }
 
-    const span = maxYear - minYear || 1;
+    const span = maxTs - minTs || 1;
     const scale = (W * zoom) / span;
 
     // initialize pan on first draw to center content if small
@@ -247,9 +294,9 @@ function draw() {
     // clamp pan to sensible range for this canvas size
     panX = clampPanForSize(W);
 
-    // convert year → pixel using computed scale and pan offset
-    function xOf(year) {
-        return (year - minYear) * scale + panX;
+    // convert timestamp → pixel using computed scale and pan offset
+    function xOfTs(ts) {
+        return (ts - minTs) * scale + panX;
     }
 
     // ---------------------
@@ -263,28 +310,32 @@ function draw() {
     ctx.stroke();
 
     // ---------------------
-    // Draw year labels (dynamic)
+    // Draw year labels (dynamic) — compute based on pixels/year
     // ---------------------
-    let step;
-    if (zoom < 0.4) step = 100;
-    else if (zoom < 1) step = 50;
-    else if (zoom < 2) step = 20;
-    else if (zoom < 6) step = 10;
-    else step = 5;
+    const msPerYear = 365.25 * 24 * 3600 * 1000;
+    const approxPxPerYear = scale * msPerYear;
+
+    let stepYears;
+    if (approxPxPerYear < 2) stepYears = 100;
+    else if (approxPxPerYear < 5) stepYears = 50;
+    else if (approxPxPerYear < 12) stepYears = 20;
+    else if (approxPxPerYear < 30) stepYears = 10;
+    else if (approxPxPerYear < 60) stepYears = 5;
+    else stepYears = 1;
 
     ctx.fillStyle = "#000";
     ctx.font = "12px Arial";
     ctx.strokeStyle = "#222";
     ctx.lineWidth = 1;
 
-    // choose first label aligned to step
-    const startLabel = Math.floor(minYear / step) * step;
-    for (let y = startLabel; y <= maxYear; y += step) {
-        let x = xOf(y);
+    const minYear = new Date(minTs).getUTCFullYear();
+    const maxYear = new Date(maxTs).getUTCFullYear();
+    const startLabel = Math.floor(minYear / stepYears) * stepYears;
+    for (let y = startLabel; y <= maxYear; y += stepYears) {
+        const ts = Date.UTC(y, 0, 1);
+        const x = xOfTs(ts);
         if (x < -50 || x > W + 50) continue;
-
-        ctx.fillText(Math.round(y), x - 10, timelineY - 5);
-
+        ctx.fillText(y, x - 10, timelineY - 5);
         ctx.beginPath();
         ctx.moveTo(x, timelineY - 3);
         ctx.lineTo(x, timelineY + 3);
@@ -298,8 +349,8 @@ function draw() {
         let y = timelineY + 40 + i * rowHeight;
 
         row.forEach(ev => {
-            const x1 = xOf(ev.start);
-            const x2 = xOf(ev.end);
+            const x1 = xOfTs(ev.start);
+            const x2 = xOfTs(ev.end);
 
             let color = "#007BFF";
             const t = (ev.type || "").toLowerCase();
@@ -392,13 +443,11 @@ document.getElementById("zoomIn").onclick = () => {
     const newZoom = Math.min(maxZoom, zoom * 1.3);
     if (newZoom === oldZoom) return;
     // adjust pan so the current view remains approximately at same place
-    // compute scales before/after
     const W = canvas.width || canvas.clientWidth;
-    // find min/max years to compute span (guard if events empty)
-    let minYear = events.length ? Math.min(...events.map(e => e.start)) : 0;
-    let maxYear = events.length ? Math.max(...events.map(e => e.end)) : 1;
-    if (minYear === maxYear) { minYear -= 1; maxYear += 1; }
-    const span = maxYear - minYear || 1;
+    let minTs = events.length ? Math.min(...events.map(e => e.start)) : 0;
+    let maxTs = events.length ? Math.max(...events.map(e => e.end)) : 1;
+    if (minTs === maxTs) { minTs -= 24*3600*1000; maxTs += 24*3600*1000; }
+    const span = maxTs - minTs || 1;
     const oldScale = (W * oldZoom) / span;
     const newScale = (W * newZoom) / span;
     // scale panX proportionally
@@ -412,10 +461,10 @@ document.getElementById("zoomOut").onclick = () => {
     const newZoom = Math.max(minZoom, zoom / 1.3);
     if (newZoom === oldZoom) return;
     const W = canvas.width || canvas.clientWidth;
-    let minYear = events.length ? Math.min(...events.map(e => e.start)) : 0;
-    let maxYear = events.length ? Math.max(...events.map(e => e.end)) : 1;
-    if (minYear === maxYear) { minYear -= 1; maxYear += 1; }
-    const span = maxYear - minYear || 1;
+    let minTs = events.length ? Math.min(...events.map(e => e.start)) : 0;
+    let maxTs = events.length ? Math.max(...events.map(e => e.end)) : 1;
+    if (minTs === maxTs) { minTs -= 24*3600*1000; maxTs += 24*3600*1000; }
+    const span = maxTs - minTs || 1;
     const oldScale = (W * oldZoom) / span;
     const newScale = (W * newZoom) / span;
     panX = panX * (newScale / oldScale);

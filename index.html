@@ -1,16 +1,33 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Timeline</title>
-  <link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>History Timeline</title>
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="style.css" />
+
+    <!-- Load Timeline Data -->
+    <script src="timeline.js" defer></script>
 </head>
+
 <body>
-  <div id="controls">
-    <button id="zoomIn">+</button>
-    <button id="zoomOut">-</button>
-  </div>
-  <canvas id="timelineCanvas"></canvas>
-  <script src="script.js"></script>
+
+    <header class="header">
+        <h1>History Timeline</h1>
+    </header>
+
+    <!-- Zoom Controls -->
+    <div class="controls">
+        <button id="zoomOut">−</button>
+        <button id="zoomIn">+</button>
+    </div>
+
+    <!-- Timeline Container -->
+    <div id="timelineContainer">
+        <canvas id="timelineCanvas"></canvas>
+    </div>
+
 </body>
 </html>

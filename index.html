@@ -11,15 +11,21 @@
 
   <div class="controls">
     <button id="zoomOut" title="Zoom out">−</button>
-    <button id="zoomIn" title="Zoom in">+</button>
+    <button id="zoomIn"  title="Zoom in">+</button>
   </div>
 
-  <!-- Optional legend (auto-filled by JS if you keep it) -->
-  <div id="legend" class="legend"></div>
+  <!-- Legend with filter chips (interactive) -->
+  <div id="legend" class="legend" aria-label="Timeline legend and filters"></div>
 
   <div id="timelineContainer">
-    <canvas id="timelineCanvas"></canvas>
+    <canvas id="timelineCanvas" aria-label="Interactive history timeline"></canvas>
   </div>
+
+  <!-- Details / inspector panel -->
+  <aside id="detailsPanel" class="details hidden" role="dialog" aria-modal="false" aria-labelledby="detailsTitle">
+    <button class="close" id="detailsClose" aria-label="Close details">×</button>
+    <div id="detailsContent"></div>
+  </aside>
 
   <script src="timeline.js"></script>
 </body>

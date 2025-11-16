@@ -622,7 +622,7 @@ function showDetails(ev) {
   const mediaUrl = (ev.media || "").trim();
   const mediaHtml = mediaUrl
     ? (isImageUrl(mediaUrl)
-        ? `<div class="media"><img src="${escapeHtml(mediaUrl)}" alt=""></div>`
+        ? `<div class="media"><img src="${escapeHtml(mediaUrl)}" alt="" loading="lazy"></div>`
         : `<div class="media"><a href="${escapeHtml(mediaUrl)}" target="_blank" rel="noopener">Open media</a></div>`)
     : "";
 
@@ -662,13 +662,12 @@ document.getElementById('zoomIn').onclick = () => {
 };
 
 document.getElementById('zoomOut').onclick = () => {
-  const oldZoom = zoom;
-  const newZoom = Math.max(minZoom, zoom / 1.3);
-  if (newZoom === oldZoom) return;
+  const oldZoombleEvents.length ? Math.min(...visibleEvents.map(e=>e.start)) : 0;
+  let maxTs = visibleEvents.length ? Math.max(...visibleEvents.map(e=>e.end))   : 1;
+  if (minTs===maxTs){ minTs -= 24*3600*1000; maxTs += 24*3600*1000; }
+  const span = (maxTs - minTs) || 1;
 
-  const W = canvas.width || canvas.clientWidth;
-  let minTs = visibleEvents.length ? Math.min(...visibleEvents.map(e=>e.start)) : 0;
-  let maxTs = visibleEvents.length ? Math.max(...visibleEvents.map(e=>e.end))  span;
+  const oldScale = (W*oldZoom)/span;
   const newScale = (W*newZoom)/span;
   panX = panX * (newScale/oldScale);
 

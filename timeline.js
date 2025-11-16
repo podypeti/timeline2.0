@@ -28,21 +28,27 @@ fetch("timeline-data.csv")
 // Expected columns: Title, Start, End, Type
 // -------------------------
 function parseCSV(text) {
-    const lines = text.trim().split("\n");
-    lines.shift(); // skip header
+    const lines = text.split("\n").map(l => l.trim()).filter(l => l.length > 0);
+    const header = lines[0].split(",").map(h => h.trim());
+    const rows = [];
 
-    return lines.map(line => {
-        const [title, start, end, type] = line.split(",");
+    for (let i = 1; i < lines.length; i++) {
+        const raw = lines[i].trim();
+        if (!raw) continue;
 
-        return {
-            title: title.trim(),
-            start: parseInt(start.trim()),
-            end: end.trim() ? parseInt(end.trim()) : parseInt(start.trim()),
-            type: type.trim()
-        };
-    });
+        const parts = raw.split(",");        
+        const row = {};
+
+        header.forEach((key, idx) => {
+            const value = (parts[idx] || "").trim();
+            row[key] = value;
+        });
+
+        rows.push(row);
+    }
+
+    return rows;
 }
-
 // -------------------------
 // AUTO-PACK EVENTS INTO ROWS
 // -------------------------

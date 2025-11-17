@@ -1,40 +1,39 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>History timeline</title>
   <link rel="stylesheet" href="style.css">
+  <style>
+    /* minimal guard for when style.css fails to load */
+    body{font-family:Arial,Helvetica,sans-serif}
+  </style>
+  <script src="timeline.js" defer></script>
 </head>
 <body>
-  <!-- Floating zoom controls in a corner -->
-  <div class="floatZoom" aria-label="Zoom controls">
+  <div class="legendControls">
+    <div class="inner">
+      <div class="legendTitle">Categories</div>
+      <div class="spacer"></div>
+      <button id="btnAll" class="ghost">All</button>
+      <button id="btnNone" class="ghost">None</button>
+    </div>
+  </div>
+  <div id="legend" class="legend"></div>
+
+  <div id="timelineContainer">
+    <canvas id="timelineCanvas" width="1280" height="560"></canvas>
+  </div>
+
+  <div class="floatZoom">
     <button id="zoomIn" title="Zoom in">+</button>
     <button id="zoomOut" title="Zoom out">−</button>
   </div>
 
-  <!-- Legend toolbar: All / None buttons -->
-  <div class="legendControls" aria-label="Legend controls">
-    <div class="inner">
-      <span class="legendTitle">Categories</span>
-      <div class="spacer"></div>
-      <button id="btnAll" class="ghost" title="Show all categories">All</button>
-      <button id="btnNone" class="ghost" title="Hide all categories">None</button>
-    </div>
-  </div>
-
-  <!-- Interactive legend (chips) -->
-  <div id="legend" class="legend" aria-label="Timeline legend and filters"></div>
-
-  <div id="timelineContainer">
-    <canvas id="timelineCanvas" aria-label="Interactive history timeline"></canvas>
-  </div>
-
-  <aside id="detailsPanel" class="details hidden" role="dialog" aria-modal="false" aria-labelledby="detailsTitle">
-    <button class="close" id="detailsClose" aria-label="Close details">×</button>
+  <div id="detailsPanel" class="details hidden" role="dialog" aria-modal="true">
+    <button id="detailsClose" class="close" aria-label="Close">×</button>
     <div id="detailsContent"></div>
-  </aside>
-
-  <script src="timeline.js"></script>
+  </div>
 </body>
 </html>

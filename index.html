@@ -7,11 +7,23 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div class="controls">
+  <!-- Floating zoom controls in a corner -->
+  <div class="floatZoom" aria-label="Zoom controls">
+    <button id="zoomIn" title="Zoom in">+</button>
     <button id="zoomOut" title="Zoom out">−</button>
-    <button id="zoomIn"  title="Zoom in">+</button>
   </div>
 
+  <!-- Legend toolbar: All / None buttons -->
+  <div class="legendControls" aria-label="Legend controls">
+    <div class="inner">
+      <span class="legendTitle">Categories</span>
+      <div class="spacer"></div>
+      <button id="btnAll" class="ghost" title="Show all categories">All</button>
+      <button id="btnNone" class="ghost" title="Hide all categories">None</button>
+    </div>
+  </div>
+
+  <!-- Interactive legend (chips) -->
   <div id="legend" class="legend" aria-label="Timeline legend and filters"></div>
 
   <div id="timelineContainer">

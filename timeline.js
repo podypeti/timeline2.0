@@ -22,7 +22,7 @@ fetch('timeline-data.csv')
   .then(data => {
     allEvents = data;
     initFiltersFromData();
-    applyFiltersAndPack(); // <- will call packRows()
+    applyFiltersAndPack();  // <- will call packRows()
     buildLegend();
     draw();
     console.log('Loaded events:', visibleEvents.length);
@@ -57,7 +57,6 @@ function toTs(year, month, day, timeStr){
 function parseCSV(text){
   if(!text) return [];
   const raw = text.split(/\r?\n/);
-  // keep header + non-empty lines
   const lines = raw.filter((l,i)=> i===0 || String(l).trim().length>0);
   if(lines.length===0) return [];
   const head = csvSplit(lines[0]).map(h=>h.trim());
@@ -116,9 +115,7 @@ function parseCSV(text){
 const activeGroups=new Set();
 let availableGroups=[]; // [{label, keyLower}]
 const chipIndex = new Map(); // keyLower -> chip element
-
 function groupKeyFor(ev){ return (ev.group || ev.type || '(Other)').trim(); }
-
 function initFiltersFromData(){
   const seen=new Map();
   allEvents.forEach(ev=>{
@@ -130,10 +127,55 @@ function initFiltersFromData(){
   activeGroups.clear();
   availableGroups.forEach(g=>activeGroups.add(g.keyLower));
 }
-
 function applyFiltersAndPack(){
   visibleEvents = allEvents.filter(ev => activeGroups.has(groupKeyFor(ev).toLowerCase()));
   packRows();
+}
+function buildLegend(){
+  const host=document.getElementById('legend'); if(!host) return;
+  host.innerHTML=''; chipIndex.clear();
+
+  // --- Control chips: "All" and "None" ---
+  const mkControlChip = (label, action) => {
+    const chip = document.createElement('div');
+    chip.className = 'chip';
+    chip.setAttribute('data-role', 'control');
+    chip.innerHTML = `<span class="swatch" style="background:#0000"></span><span>${label}</span>`;
+    chip.addEventListener('click', () => {
+      if (action === 'all') {
+        activeGroups.clear();
+        availableGroups.forEach(g => activeGroups.add(g.keyLower));
+      } else if (action === 'none') {
+        activeGroups.clear();
+      }
+      // update category chips' visual state
+      chipIndex.forEach((el, key) => {
+        if (el.getAttribute('data-role') === 'control') return;
+        el.classList.toggle('inactive', !activeGroups.has(key));
+      });
+      applyFiltersAndPack(); draw();
+    });
+    return chip;
+  };
+  host.appendChild(mkControlChip('All', 'all'));
+  host.appendChild(mkControlChip('None', 'none'));
+
+  // --- Category chips ---
+  availableGroups.forEach(({label,keyLower})=>{
+    const color = COLOR_MAP[keyLower] ?? COLOR_MAP[''];
+    const chip=document.createElement('div');
+    chip.className='chip'+(activeGroups.has(keyLower)?'':' inactive');
+    chip.setAttribute('data-key', keyLower);
+    chip.innerHTML=`<span class="swatch" style="background:${color}"></span><span>${label}</span>`;
+    chip.addEventListener('click',()=>{
+      if(activeGroups.has(keyLower)) activeGroups.delete(keyLower);
+      else activeGroups.add(keyLower);
+      chip.classList.toggle('inactive');
+      applyFiltersAndPack(); draw();
+    });
+    host.appendChild(chip);
+    chipIndex.set(keyLower, chip);
+  });
 }
 
 // ====== Colors ======
@@ -152,10 +194,9 @@ function colorFor(ev){
 
 // ====== Scripture linking → jwlshare ======
 const BOOK_TOKEN_RE = /^(Gen|Ex|Lev|Num|Deut|Josh|Jg|Judg|Ruth|1\s?Sam|2\s?Sam|1\s?Ki|2\s?Ki|1\s?Ch|2\s?Ch|Chron|Ezra|Neh|Esth?|Job|Ps|Prov|Eccl|Song|Isa|Jer|Lam|Ezek|Dan|Hos|Joel|Amos|Obad|Jonah?|Mic|Nah|Hab|Zeph|Hag|Zech|Mal|Matt|Mt|Mark|Mrk|Luke|Lu|John|Jn|Acts|Rom|Ro|1\s?Cor|2\s?Cor|Gal|Eph|Phil|Col|1\s?Thess|2\s?Thess|1\s?Tim|2\s?Tim|Titus|Philem|Heb|Jas|James|1\s?Pet|2\s?Pet|1\s?John|2\s?John|3\s?John|Jude|Rev)\.?$/i;
-const REF_RE = /^(\d+):(\d+)(?:\d+)?$/;
-const BOOK_CODE = { /* ... same mapping as your file (omitted here for brevity) ... */ };
-// (Paste your BOOK_CODE mapping here unchanged)
-function normBookKey(raw){ return String(raw || '').trim().replace(/\.$/,'').toLowerCase().replace(/\s+/g,' ').replace(/^i\s/,'1 ').replace(/^ii\s/,'2 ').replace(/^iii\s/,'3 '); }
+const REF_RE = /^(\d+):(\d+)(?:[\-\–](\d+))?$/;
+const BOOK_CODE = { 'genesis':'01','gen':'01','ge':'01','gn':'01','exodus':'02','ex':'02','leviticus':'03','lev':'03','le':'03','numbers':'04','num':'04','nu':'04','nm':'04','nb':'04','deuteronomy':'05','deut':'05','de':'05','dt':'05','joshua':'06','josh':'06','jos':'06','jo':'06','judges':'07','judg':'07','jg':'07','ruth':'08','ru':'08','1 samuel':'09','1sam':'09','1 sam':'09','1sa':'09','i sam':'09','1sm':'09','2 samuel':'10','2sam':'10','2 sam':'10','2sa':'10','ii sam':'10','2sm':'10','1 kings':'11','1ki':'11','1 kgs':'11','i ki':'11','2 kings':'12','2ki':'12','2 kgs':'12','ii ki':'12','1 chronicles':'13','1ch':'13','i ch':'13','1 chron':'13','2 chronicles':'14','2ch':'14','ii ch':'14','2 chron':'14','ezra':'15','ezr':'15','nehemiah':'16','neh':'16','esther':'17','esth':'17','es':'17','job':'18','jb':'18','psalms':'19','ps':'19','psalm':'19','proverbs':'20','prov':'20','pr':'20','ecclesiastes':'21','eccl':'21','ec':'21','song of solomon':'22','song':'22','so':'22','canticles':'22','song of songs':'22','isaiah':'23','isa':'23','is':'23','jeremiah':'24','jer':'24','je':'24','lamentations':'25','lam':'25','la':'25','ezekiel':'26','eze':'26','ezek':'26','ek':'26','daniel':'27','dan':'27','da':'27','hosea':'28','hos':'28','ho':'28','joel':'29','joe':'29','jl':'29','amos':'30','am':'30','obadiah':'31','obad':'31','ob':'31','jonah':'32','jon':'32','jh':'32','micah':'33','mic':'33','mi':'33','nahum':'34','nah':'34','na':'34','habakkuk':'35','hab':'35','hb':'35','zephaniah':'36','zeph':'36','zp':'36','haggai':'37','hag':'37','hg':'37','zechariah':'38','zech':'38','zc':'38','malachi':'39','mal':'39','ml':'39','matthew':'40','matt':'40','mt':'40','mark':'41','mrk':'41','mk':'41','mr':'41','luke':'42','lu':'42','lk':'42','john':'43','jn':'43','joh':'43','acts':'44','ac':'44','romans':'45','rom':'45','ro':'45','1 corinthians':'46','1 cor':'46','i cor':'46','1co':'46','2 corinthians':'47','2 cor':'47','ii cor':'47','2co':'47','galatians':'48','gal':'48','ga':'48','ephesians':'49','eph':'49','ep':'49','philippians':'50','phil':'50','php':'50','colossians':'51','col':'51','co':'51','1 thessalonians':'52','1 thess':'52','1 th':'52','1ts':'52','2 thessalonians':'53','2 thess':'53','2 th':'53','2ts':'53','1 timothy':'54','1 tim':'54','1ti':'54','2 timothy':'55','2 tim':'55','2ti':'55','titus':'56','tit':'56','ti':'56','philemon':'57','philem':'57','phm':'57','hebrews':'58','heb':'58','he':'58','james':'59','jas':'59','jm':'59','1 peter':'60','1 pet':'60','1pe':'60','2 peter':'61','2 pet':'61','2pe':'61','1 john':'62','1 john':'62','1jn':'62','2 john':'63','2jn':'63','3 john':'64','3jn':'64','jude':'65','jud':'65','jd':'65','revelation':'66','rev':'66','re':'66' };
+function normBookKey(raw){ return String(raw||'').trim().replace(/\.$/,'').toLowerCase().replace(/\s+/g,' ').replace(/^i\s/,'1 ').replace(/^ii\s/,'2 ').replace(/^iii\s/,'3 '); }
 function jwCodeFor(book, ch, vs){ const code=BOOK_CODE[normBookKey(book)]; if(!code) return null; const cc=String(parseInt(ch,10)).padStart(3,'0'); const vv=String(parseInt(vs||0,10)).padStart(3,'0'); return code+cc+vv; }
 function escapeHtml(s){ return String(s||'').replace(/&/g,'&').replace(/</g,'<').replace(/>/g,'>').replace(/\"/g,'"').replace(/'/g,'&#39;'); }
 function linkifyScripture(text){
@@ -174,7 +215,7 @@ function linkifyScripture(text){
       out += code8 ? ( '<a target="_blank" rel="noopener" href="'+jwFinderUrl(code8)+'">'+escapeHtml(tk)+'</a>' ) : escapeHtml(tk);
       i++; continue;
     }
-    if(BOOK_TOKEN_RE.test(tk)) lastBook=tk;
+    if(BOOK_TOKEN_RE.test(tk)) lastBook=t k;
     out+=escapeHtml(tk); i++;
   }
   return out.replace(/<br\s*\/?>/gi,'<br>');
@@ -254,9 +295,11 @@ function draw(){
       const w=right-left;
       const color=colorFor(ev);
       const stickX=(w<10)?x1:left;
+
       // guide from axis
       ctx.save(); ctx.setLineDash([3,4]); ctx.strokeStyle=color+'AA'; ctx.lineWidth=1.5;
       ctx.beginPath(); ctx.moveTo(stickX,timelineY); ctx.lineTo(stickX,yTop+10); ctx.stroke(); ctx.restore();
+
       if(w>=10){
         ctx.fillStyle=color;
         const barX=left, barY=yTop+18, barW=Math.max(6,w), barH=6;
@@ -267,6 +310,7 @@ function draw(){
         ctx.beginPath(); ctx.fillStyle=color; ctx.arc(stickX,yTop+21,r,0,Math.PI*2); ctx.fill();
         hitRegions.push({x:stickX-6,y:yTop+15,w:12,h:12,ev,kind:'dot'});
       }
+
       // label flag
       const title=ev.title||'';
       const dateTxt=displayWhen(ev);
@@ -293,16 +337,12 @@ function draw(){
   });
 }
 
-// ====== Row packing (non-overlapping lanes) — single clean version ======
+// ====== Row packing (non-overlapping lanes) ======
 function packRows(){
   rows = [];
   if(!visibleEvents || visibleEvents.length === 0) return;
   // Sort by (start, then end) asc for stable packing
-  const sorted = [...visibleEvents].sort((a,b)=>{
-    if(a.start!==b.start) return a.start-b.start;
-    return a.end-b.end;
-  });
-  // Each row keeps the "lastEnd" timestamp to test overlap
+  const sorted = [...visibleEvents].sort((a,b)=>{ if(a.start!==b.start) return a.start-b.start; return a.end-b.end; });
   const R = [];
   sorted.forEach(ev=>{
     const start = ev.start, end = Math.max(ev.end, ev.start);
@@ -310,7 +350,7 @@ function packRows(){
     for(let r=0;r<R.length;r++){
       const lane = R[r];
       const last = lane._lastEnd ?? -Infinity;
-      if(start >= last){ // no overlap with the last event in this row
+      if(start >= last){
         lane.push(ev);
         lane._lastEnd = end + 1;
         placed = true; break;
@@ -322,7 +362,6 @@ function packRows(){
       R.push(lane);
     }
   });
-  // strip helpers
   rows = R.map(lane => lane.map(x=>x));
 }
 
@@ -443,60 +482,3 @@ zo && (zo.onclick = ()=>{
 
 // Redraw on resize
 window.addEventListener('resize', ()=> { clampPan(); draw(); });
-
-// ====== LEGEND with control chips ("All" / "None") ======
-function buildLegend() {
-  const host = document.getElementById('legend');
-  if (!host) return;
-
-  host.innerHTML = '';
-  chipIndex.clear();
-
-  // --- Control chips: All / None ---
-  const mkControlChip = (label, action) => {
-    const chip = document.createElement('div');
-    chip.className = 'chip';
-    chip.setAttribute('data-role', 'control');
-    chip.innerHTML = `<span class="swatch" style="background:#0000"></span><span>${label}</span>`;
-    chip.addEventListener('click', () => {
-      if (action === 'all') {
-        activeGroups.clear();
-        availableGroups.forEach(g => activeGroups.add(g.keyLower));
-      } else if (action === 'none') {
-        activeGroups.clear();
-      }
-      // update all category chips' visual state
-      chipIndex.forEach((el, key) => {
-        if (el.getAttribute('data-role') === 'control') return; // skip control chips
-        el.classList.toggle('inactive', !activeGroups.has(key));
-      });
-      applyFiltersAndPack();
-      draw();
-    });
-    return chip;
-  };
-
-  // Add the two control chips
-  host.appendChild(mkControlChip('All', 'all'));
-  host.appendChild(mkControlChip('None', 'none'));
-
-  // --- Category chips ---
-  availableGroups.forEach(({ label, keyLower }) => {
-    const color = COLOR_MAP[keyLower] ?? COLOR_MAP[''];
-    const chip = document.createElement('div');
-    chip.className = 'chip' + (activeGroups.has(keyLower) ? '' : ' inactive');
-    chip.setAttribute('data-key', keyLower);
-    chip.innerHTML = `<span class="swatch" style="background:${color}"></span><span>${label}</span>`;
-
-    chip.addEventListener('click', () => {
-      if (activeGroups.has(keyLower)) activeGroups.delete(keyLower);
-      else activeGroups.add(keyLower);
-      chip.classList.toggle('inactive');
-      applyFiltersAndPack();
-      draw();
-    });
-
-    host.appendChild(chip);
-    chipIndex.set(keyLower, chip);
-  });
-}

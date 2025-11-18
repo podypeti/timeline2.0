@@ -445,11 +445,14 @@ zo && (zo.onclick = ()=>{
 window.addEventListener('resize', ()=> { clampPan(); draw(); });
 
 // ====== LEGEND with control chips ("All" / "None") ======
-function buildLegend(){
-  const host=document.getElementById('legend'); if(!host) return;
-  host.innerHTML=''; chipIndex.clear();
+function buildLegend() {
+  const host = document.getElementById('legend');
+  if (!host) return;
 
-  // --- Control chips: "All" and "None" ---
+  host.innerHTML = '';
+  chipIndex.clear();
+
+  // --- Control chips: All / None ---
   const mkControlChip = (label, action) => {
     const chip = document.createElement('div');
     chip.className = 'chip';
@@ -462,9 +465,9 @@ function buildLegend(){
       } else if (action === 'none') {
         activeGroups.clear();
       }
-      // Update visual state for category chips
+      // update all category chips' visual state
       chipIndex.forEach((el, key) => {
-        if (el.getAttribute('data-role') === 'control') return;
+        if (el.getAttribute('data-role') === 'control') return; // skip control chips
         el.classList.toggle('inactive', !activeGroups.has(key));
       });
       applyFiltersAndPack();
@@ -472,22 +475,27 @@ function buildLegend(){
     });
     return chip;
   };
+
+  // Add the two control chips
   host.appendChild(mkControlChip('All', 'all'));
   host.appendChild(mkControlChip('None', 'none'));
 
   // --- Category chips ---
   availableGroups.forEach(({ label, keyLower }) => {
     const color = COLOR_MAP[keyLower] ?? COLOR_MAP[''];
-    const chip=document.createElement('div');
-    chip.className='chip' + (activeGroups.has(keyLower)?'':' inactive');
+    const chip = document.createElement('div');
+    chip.className = 'chip' + (activeGroups.has(keyLower) ? '' : ' inactive');
     chip.setAttribute('data-key', keyLower);
-    chip.innerHTML=`<span class="swatch" style="background:${color}"></span><span>${label}</span>`;
-    chip.addEventListener('click',()=>{
-      if(activeGroups.has(keyLower)) activeGroups.delete(keyLower);
+    chip.innerHTML = `<span class="swatch" style="background:${color}"></span><span>${label}</span>`;
+
+    chip.addEventListener('click', () => {
+      if (activeGroups.has(keyLower)) activeGroups.delete(keyLower);
       else activeGroups.add(keyLower);
       chip.classList.toggle('inactive');
-      applyFiltersAndPack(); draw();
+      applyFiltersAndPack();
+      draw();
     });
+
     host.appendChild(chip);
     chipIndex.set(keyLower, chip);
   });

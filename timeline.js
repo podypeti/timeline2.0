@@ -25,7 +25,6 @@ fetch('timeline-data.csv')
     initFiltersFromData();
     applyFiltersAndPack();  // <- will call packRows()
     buildLegend();
-    attachLegendToolbar();
     // ====== NEW: Row packing (non-overlapping lanes) ======
 function packRows(){
   rows = [];
@@ -197,28 +196,6 @@ function buildLegend(){
     chipIndex.set(keyLower, chip);
   });
 }
-
-function attachLegendToolbar(){
-  const btnAll=document.getElementById('btnAll');
-  const btnNone=document.getElementById('btnNone');
-  if(btnAll){
-    btnAll.onclick=()=>{
-      activeGroups.clear();
-      availableGroups.forEach(g=>activeGroups.add(g.keyLower));
-      // update chips
-      chipIndex.forEach((el)=> el.classList.remove('inactive'));
-      applyFiltersAndPack(); draw();
-    };
-  }
-  if(btnNone){
-    btnNone.onclick=()=>{
-      activeGroups.clear();
-      chipIndex.forEach((el)=> el.classList.add('inactive'));
-      applyFiltersAndPack(); draw();
-    };
-  }
-}
-
 // ====== Colors ======
 const COLOR_MAP={
   'events':'#1f77b4','persons':'#2ca02c','covenants':'#8c564b','time periods':'#9467bd',

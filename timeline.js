@@ -5,17 +5,12 @@ const LABEL_ANCHOR_YEAR = -5000; // start ticks from 5000 BCE
 const INITIAL_CENTER_YEAR = -4000; // center view near 4000 BCE
 
 // ===== Canvas and state =====
-const canvas = document.getElementById('timelineCanvas');
+const canvas = document.getElementById('timelineCanvas'); // DOM is ready because script is at bottom
 const ctx = canvas.getContext('2d');
 let W, H;
 let scale = 1;
 let panX = 0;
 let firstDraw = true;
-
-// Panning state
-let isDragging = false;
-let dragStartX = 0;
-let panStartX = 0;
 
 // ===== Utility functions =====
 function startOfYear(y) { return Date.UTC(y, 0, 1); }
@@ -87,11 +82,6 @@ function draw(minTs, maxTs) {
   W = canvas.width = window.innerWidth;
   H = canvas.height = window.innerHeight;
   ctx.clearRect(0, 0, W, H);
-  ctx.strokeStyle = '#000';
-ctx.beginPath();
-ctx.moveTo(0, H / 2);
-ctx.lineTo(W, H / 2);
-ctx.stroke();
 
   const pxPerYear = scale;
   const { unit, step } = chooseTickScale(pxPerYear);
@@ -108,7 +98,17 @@ ctx.stroke();
       const pillW = ctx.measureText(text).width + 10;
       const pillH = 20;
       const pillY = 30;
-
+      if (x - pillW / 2 > lastRight + gap) {
+        ctx.fillStyle = '#ffffffee';
+        ctx.strokeStyle = '#00000022';
+        ctx.beginPath();
+        ctx.roundRect(x - pillW / 2, pillY, pillW, pillH, 6);
+        ctx.fill();
+        ctx.fillStyle = '#000';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(text, x - pillW / 2 + 5, pillY + pillH / 2);
+        lastRight = x + pillW / 2;
+      }
     }
     if (unit === 'year') {
       t = startOfYear(new Date(t).getUTCFullYear() + step);
@@ -151,27 +151,3 @@ document.getElementById('resetZoom').addEventListener('click', () => {
 
 // ===== Responsive redraw on resize =====
 window.addEventListener('resize', () => draw(minTs, maxTs));
-
-// ===== Panning support =====
-canvas.addEventListener('mousedown', (e) => {
-  isDragging = true;
-  dragStartX = e.clientX;
-  panStartX = panX;
-});
-
-canvas.addEventListener('mousemove', (e) => {
-  if (isDragging) {
-    const dx = e.clientX - dragStartX;
-    panX = panStartX + dx;
-    draw(minTs, maxTs);
-  }
-});
-
-canvas.addEventListener('mouseup', () => {
-  isDragging = false;
-});
-
-canvas.addEventListener('mouseleave', () => {
-  isDragging = false;
-});
-scale = window.innerWidth / (maxTs - minTs); // auto-fit

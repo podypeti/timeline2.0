@@ -8,94 +8,42 @@ const INITIAL_CENTER_YEAR = -4000; // center view near 4000 BCE
 const canvas = document.getElementById('timelineCanvas');
 const ctx = canvas.getContext('2d');
 let W, H;
-let scale; // pixels per millisecond
+let scale; // pixels per year
 let panX = 0;
-let firstDraw = true;
 let isDragging = false;
 let dragStartX = 0;
 
+// ===== Timeline range =====
+const minYear = -5000;
+const maxYear = 2100;
+
 // ===== Utility functions =====
-function startOfYear(y) { return Date.UTC(y, 0, 1); }
-function startOfMonth(y, m) { return Date.UTC(y, m - 1, 1); }
-function formatYearHuman(y) { return y < 0 ? `${Math.abs(y)} BCE` : `${y}`; }
-
-function formatTickLabel(ts, unit) {
-  const d = new Date(ts);
-  const y = d.getUTCFullYear();
-
-  if (unit === 'year') return formatYearHuman(y);
-  if (unit === 'month') {
-    const m = d.getUTCMonth() + 1;
-    const yTxt = (y < 0) ? `${Math.abs(y)} BCE` : `${y}`;
-    return `${yTxt}-${String(m).padStart(2,'0')}`;
-  }
-  if (unit === 'day') {
-    const m = d.getUTCMonth() + 1, day = d.getUTCDate();
-    const yTxt = (y < 0) ? `${Math.abs(y)} BCE` : `${y}`;
-    return `${yTxt}-${String(m).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
-  }
-  return '';
+function formatYearHuman(y) {
+  return y < 0 ? `${Math.abs(y)} BCE` : `${y}`;
 }
 
 function chooseTickScale(pxPerYear) {
-  const pxPerMonth = pxPerYear / 12;
-  const pxPerDay = pxPerYear / 365.2425;
-
-  if (pxPerDay >= 60) return { unit: 'day', step: 1 };
-  if (pxPerDay >= 30) return { unit: 'day', step: 7 };
-
-  if (pxPerMonth >= 24) return { unit: 'month', step: 1 };
-  if (pxPerMonth >= 12) return { unit: 'month', step: 3 };
-  if (pxPerMonth >= 6) return { unit: 'month', step: 6 };
-
   if (pxPerYear >= 120) return { unit: 'year', step: 1 };
   if (pxPerYear >= 40) return { unit: 'year', step: 10 };
   if (pxPerYear >= 12) return { unit: 'year', step: 100 };
-
   return { unit: 'year', step: 1000 };
 }
 
-function alignTickFromAnchor(minTs, anchorYear, unit, step) {
-  const dMin = new Date(minTs);
-  const minY = dMin.getUTCFullYear();
-
-  if (unit === 'year') {
-    let k = Math.ceil((minY - anchorYear) / step);
-    let y0 = anchorYear + k * step;
-    if (y0 === 0) y0 += step;
-    return startOfYear(y0);
-  }
-
-  if (unit === 'month') {
-    const absMin = dMin.getUTCFullYear() * 12 + dMin.getUTCMonth();
-    const absAnc = anchorYear * 12;
-    const k = Math.ceil((absMin - absAnc) / step);
-    const absOut = absAnc + k * step;
-    let yOut = Math.trunc(absOut / 12), mOut = (absOut % 12) + 1;
-    if (yOut === 0) yOut = -1;
-    return startOfMonth(yOut, mOut);
-  }
-
-  return minTs;
-}
-
 // ===== Main draw function =====
-function draw(minTs, maxTs) {
+function draw() {
   W = canvas.width = window.innerWidth;
   H = canvas.height = window.innerHeight;
   ctx.clearRect(0, 0, W, H);
 
-  const pxPerYear = scale * 1000 * 60 * 60 * 24 * 365.2425; // convert ms to years
-  const { unit, step } = chooseTickScale(pxPerYear);
-
-  let t = alignTickFromAnchor(minTs, LABEL_ANCHOR_YEAR, unit, step);
+  const { unit, step } = chooseTickScale(scale);
+  let t = Math.ceil((minYear - LABEL_ANCHOR_YEAR) / step) * step + LABEL_ANCHOR_YEAR;
   let lastRight = -Infinity;
   const gap = 10;
 
-  while (t < maxTs) {
-    const x = (t - minTs) * scale + panX;
+  while (t < maxYear) {
+    const x = (t - minYear) * scale + panX;
     if (x > -50 && x < W + 50) {
-      const text = formatTickLabel(t, unit);
+      const text = formatYearHuman(t);
       ctx.font = '14px sans-serif';
       const pillW = ctx.measureText(text).width + 10;
       const pillH = 20;
@@ -112,55 +60,37 @@ function draw(minTs, maxTs) {
         lastRight = x + pillW / 2;
       }
     }
-    if (unit === 'year') {
-      t = startOfYear(new Date(t).getUTCFullYear() + step);
-    } else if (unit === 'month') {
-      const d = new Date(t);
-      let y = d.getUTCFullYear(), m = d.getUTCMonth() + 1;
-      m += step;
-      while (m > 12) { y++; m -= 12; }
-      t = startOfMonth(y, m);
-    } else if (unit === 'day') {
-      t += step * 86400000;
-    }
+    t += step;
   }
 }
 
 // ===== Initialization =====
-let minTs = startOfYear(-5000);
-let maxTs = startOfYear(2100);
-
-// Dynamic initial scale to fit entire timeline
-scale = window.innerWidth / (maxTs - minTs);
-
-// Center on INITIAL_CENTER_YEAR
-panX = (window.innerWidth / 2) - ((startOfYear(INITIAL_CENTER_YEAR) - minTs) * scale);
-
-draw(minTs, maxTs);
+function init() {
+  scale = window.innerWidth / (maxYear - minYear); // fit entire timeline
+  panX = (window.innerWidth / 2) - ((INITIAL_CENTER_YEAR - minYear) * scale);
+  draw();
+}
+init();
 
 // ===== Zoom controls =====
 function zoomIn() {
   scale = Math.min(scale * 1.3, maxZoom);
-  draw(minTs, maxTs);
+  draw();
 }
 function zoomOut() {
   scale = Math.max(scale / 1.3, minZoom);
-  draw(minTs, maxTs);
+  draw();
 }
 document.getElementById('zoomIn').addEventListener('click', zoomIn);
 document.getElementById('zoomOut').addEventListener('click', zoomOut);
-document.getElementById('resetZoom').addEventListener('click', () => {
-  scale = window.innerWidth / (maxTs - minTs);
-  panX = (window.innerWidth / 2) - ((startOfYear(INITIAL_CENTER_YEAR) - minTs) * scale);
-  draw(minTs, maxTs);
-});
+document.getElementById('resetZoom').addEventListener('click', init);
 
 // ===== Mouse wheel zoom =====
 canvas.addEventListener('wheel', (e) => {
   e.preventDefault();
   const zoomFactor = e.deltaY < 0 ? 1.1 : 0.9;
   scale = Math.min(Math.max(scale * zoomFactor, minZoom), maxZoom);
-  draw(minTs, maxTs);
+  draw();
 });
 
 // ===== Drag-to-pan =====
@@ -172,7 +102,7 @@ canvas.addEventListener('mousemove', (e) => {
   if (isDragging) {
     panX += e.clientX - dragStartX;
     dragStartX = e.clientX;
-    draw(minTs, maxTs);
+    draw();
   }
 });
 canvas.addEventListener('mouseup', () => isDragging = false);
@@ -182,5 +112,5 @@ canvas.addEventListener('mouseleave', () => isDragging = false);
 window.addEventListener('resize', () => {
   W = canvas.width = window.innerWidth;
   H = canvas.height = window.innerHeight;
-  draw(minTs, maxTs);
+  draw();
 });

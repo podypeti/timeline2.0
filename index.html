@@ -1,4 +1,3 @@
-<!-- cache purge -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6,8 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>History Timeline</title>
 
-  <!-- Load CSS (this must be a <link>, not plain text) -->
-  <link rel="stylesheet" href="style.css" />
+  <!-- Disable caching of HTML to always load the newest version -->
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+
+  <!-- Prevent caching of favicon (if any) -->
+  <link rel="icon" href="data:,">
+
+  <!-- Load CSS -->
+  <link rel="stylesheet" href="style.css?v=1" />
 </head>
 <body>
   <!-- Legend chips (including All / None) are injected here by JS -->
@@ -32,8 +39,7 @@
 
   <noscript>This page requires JavaScript to display the timeline.</noscript>
 
-  <!-- Load JS (this must be a <script>, not plain text) -->
-  <script src="timeline.js?v=7" defer></script>
+  <!-- Load JS (cache-busted with version number) -->
+  <script src="timeline.js?v=1" defer></script>
 </body>
 </html>
-

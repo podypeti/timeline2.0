@@ -7,8 +7,14 @@ const LABEL_ANCHOR_YEAR = -5000; // start ticks from 5000 BCE
 const INITIAL_CENTER_YEAR = -4000; // center view near 4000 BCE
 
 // ===== Canvas and state =====
-const canvas = document.getElementById('timeline');
-const ctx = canvas.getContext('2d');
+document.addEventListener('DOMContentLoaded', () => {
+  const canvas = document.getElementById('timelineCanvas');
+  if (!canvas) {
+    console.error('Canvas element not found!');
+    return;
+  }
+  const ctx = canvas.getContext('2d');
+});
 let W, H;
 let scale = 1;
 let panX = 0;

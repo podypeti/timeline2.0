@@ -8,13 +8,11 @@ const INITIAL_CENTER_YEAR = -4000; // center view near 4000 BCE
 const canvas = document.getElementById('timelineCanvas');
 const ctx = canvas.getContext('2d');
 let W, H;
-
-// Compute dynamic initial scale so the timeline fits the screen
-let minTs = startOfYear(-5000);
-let maxTs = startOfYear(2100);
-let scale = window.innerWidth / (maxTs - minTs); // auto-fit entire range
+let scale; // pixels per millisecond
 let panX = 0;
 let firstDraw = true;
+let isDragging = false;
+let dragStartX = 0;
 
 // ===== Utility functions =====
 function startOfYear(y) { return Date.UTC(y, 0, 1); }
@@ -87,7 +85,7 @@ function draw(minTs, maxTs) {
   H = canvas.height = window.innerHeight;
   ctx.clearRect(0, 0, W, H);
 
-  const pxPerYear = scale;
+  const pxPerYear = scale * 1000 * 60 * 60 * 24 * 365.2425; // convert ms to years
   const { unit, step } = chooseTickScale(pxPerYear);
 
   let t = alignTickFromAnchor(minTs, LABEL_ANCHOR_YEAR, unit, step);
@@ -126,30 +124,63 @@ function draw(minTs, maxTs) {
       t += step * 86400000;
     }
   }
-
-  if (firstDraw) {
-    const initTs = startOfYear(INITIAL_CENTER_YEAR);
-    panX = (W / 2) - ((initTs - minTs) * scale);
-    firstDraw = false;
-  }
 }
 
-// ===== Zoom controls =====
-function zoomIn() { scale = Math.min(scale * 1.3, maxZoom); draw(minTs, maxTs); }
-function zoomOut() { scale = Math.max(scale / 1.3, minZoom); draw(minTs, maxTs); }
-
 // ===== Initialization =====
+let minTs = startOfYear(-5000);
+let maxTs = startOfYear(2100);
+
+// Dynamic initial scale to fit entire timeline
+scale = window.innerWidth / (maxTs - minTs);
+
+// Center on INITIAL_CENTER_YEAR
+panX = (window.innerWidth / 2) - ((startOfYear(INITIAL_CENTER_YEAR) - minTs) * scale);
+
 draw(minTs, maxTs);
 
-// ===== Event listeners for zoom buttons =====
+// ===== Zoom controls =====
+function zoomIn() {
+  scale = Math.min(scale * 1.3, maxZoom);
+  draw(minTs, maxTs);
+}
+function zoomOut() {
+  scale = Math.max(scale / 1.3, minZoom);
+  draw(minTs, maxTs);
+}
 document.getElementById('zoomIn').addEventListener('click', zoomIn);
 document.getElementById('zoomOut').addEventListener('click', zoomOut);
 document.getElementById('resetZoom').addEventListener('click', () => {
-  scale = window.innerWidth / (maxTs - minTs); // reset to auto-fit
+  scale = window.innerWidth / (maxTs - minTs);
   panX = (window.innerWidth / 2) - ((startOfYear(INITIAL_CENTER_YEAR) - minTs) * scale);
-  firstDraw = false;
   draw(minTs, maxTs);
 });
 
-// ===== Responsive redraw on resize =====
-window.addEventListener('resize', () => draw(minTs, maxTs));
+// ===== Mouse wheel zoom =====
+canvas.addEventListener('wheel', (e) => {
+  e.preventDefault();
+  const zoomFactor = e.deltaY < 0 ? 1.1 : 0.9;
+  scale = Math.min(Math.max(scale * zoomFactor, minZoom), maxZoom);
+  draw(minTs, maxTs);
+});
+
+// ===== Drag-to-pan =====
+canvas.addEventListener('mousedown', (e) => {
+  isDragging = true;
+  dragStartX = e.clientX;
+});
+canvas.addEventListener('mousemove', (e) => {
+  if (isDragging) {
+    panX += e.clientX - dragStartX;
+    dragStartX = e.clientX;
+    draw(minTs, maxTs);
+  }
+});
+canvas.addEventListener('mouseup', () => isDragging = false);
+canvas.addEventListener('mouseleave', () => isDragging = false);
+
+// ===== Responsive redraw =====
+window.addEventListener('resize', () => {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+  draw(minTs, maxTs);
+});

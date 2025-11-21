@@ -4,7 +4,7 @@
 const minZoom = 0.2;
 const maxZoom = 500; // allow deep zoom for months/days
 const LABEL_ANCHOR_YEAR = -5000; // start ticks from 5000 BCE
-const INITIAL_CENTER_YEAR = -4000; // center view near 4000 BCE
+const INITIAL_CENTER_YEAR = -4000; // center view near 4000 BCEs
 
 // ===== Canvas and state =====
 document.addEventListener('DOMContentLoaded', () => {

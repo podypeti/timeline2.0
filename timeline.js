@@ -639,22 +639,6 @@ let t = alignTickFromAnchor(minTs, LABEL_ANCHOR_YEAR, unit, step);
         const pillY = topPadding;
         const left = Math.max(4, pillX);
         const right = left + pillW;
-        // Prevent overlap
-        if (left > lastRight + gap) {
-          // draw label pill
-          ctx.fillStyle = '#ffffffee';
-          ctx.strokeStyle = '#00000022';
-          roundRect(ctx, left, pillY, pillW, pillH, 6, true, false);
-          ctx.fillStyle = '#000';
-          ctx.fillText(text, left + 5, pillY + pillH / 2);
-          // guide to axis
-          ctx.strokeStyle = '#00000033';
-          ctx.beginPath();
-          ctx.moveTo(x, pillY + pillH);
-          ctx.lineTo(x, timelineY - 4);
-          ctx.stroke();
-          lastRight = right;
-        }
       }
     }
     // Advance tick

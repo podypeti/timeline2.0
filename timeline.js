@@ -68,7 +68,7 @@ if (rz) {
   // Clamp and redraw
   clampPan();
   draw();
-});
+);
 rz && (rz.onclick = () => {
   zoom = 1;
 

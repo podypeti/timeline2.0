@@ -848,7 +848,7 @@ function displayWhen(ev) {
 }
 
 // ====== Interaction ======
-functionterDown(x) {
+function onPointerDown(x) {
   isPanning = true;
   suppressNextClick = false;
   panStartClientX = x;

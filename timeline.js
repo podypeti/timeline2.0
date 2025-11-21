@@ -30,10 +30,30 @@ let hitRegions = [];
 let suppressNextClick = false;
 // Reset zoom & center
 const rz = document.getElementById('resetZoom');
-rz && (rz.onclick = () => {
-  // Reset zoom
-  zoom = 1;
+if (rz) {
+  rz.onclick = () => {
+    // Reset zoom to base
+    zoom = 1;
 
+    // Compute span across visible events (fallback if none)
+    let minTs = visibleEvents.length ? Math.min(...visibleEvents.map(e => e.start)) : 0;
+    let maxTs = visibleEvents.length ? Math.max(...visibleEvents.map(e => e.end)) : 1;
+    if (minTs === maxTs) { minTs -= 86400000; maxTs += 86400000; }
+
+    // Center the midpoint of the span in the canvas
+    const W = canvas.width || canvas.clientWidth;
+    const span = (maxTs - minTs) || 1;
+    const scale = (W * zoom) / span; // zoom = 1
+    const midTs = (minTs + maxTs) / 2;
+
+    // We want xOfTs(midTs) = W/2
+    // xOfTs(ts) = (ts - minTs) * scale + panX
+    panX = (W / 2) - ((midTs - minTs) * scale);
+
+    clampPan();
+    draw();
+  };
+}
   // Compute min/max across visible events (fallback if empty)
   let minTs = visibleEvents.length ? Math.min(...visibleEvents.map((e) => e.start)) : 0;
   let maxTs = visibleEvents.length ? Math.max(...visibleEvents.map((e) => e.end)) : 1;

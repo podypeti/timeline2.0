@@ -74,7 +74,7 @@ const canvas = document.getElementById('timelineCanvas');
 const ctx = canvas.getContext('2d');
 let zoom = 1;
 const minZoom = 0.2;
-const maxZoom = 20;
+const maxZoom = 500;
 let allEvents = [];
 let visibleEvents = [];
 let rows = [];
@@ -779,25 +779,6 @@ function packRows() {
 }
 
 // ====== Helpers ======
-// Tick scale chooser (based on px/year): days → months → years
-function chooseTickScale(pxPerYear) {
-  const pxPerMonth = pxPerYear / 12;
-  const pxPerDay = pxPerYear / 365.2425;
-  // Days (highest zoom)
-  if (pxPerDay >= 60) return { unit: 'day', step: 1 }; // daily
-  if (pxPerDay >= 30) return { unit: 'day', step: 7 }; // weekly
-  // Months (high zoom)
-  if (pxPerMonth >= 24) return { unit: 'month', step: 1 }; // every month
-  if (pxPerMonth >= 12) return { unit: 'month', step: 3 }; // every 3 months
-  if (pxPerMonth >= 6) return { unit: 'month', step: 6 }; // every 6 months
-  // Years (mid / low zoom)
-  if (pxPerYear >= 120) return { unit: 'year', step: 1 }; // each year
-  if (pxPerYear >= 40) return { unit: 'year', step: 10 }; // decades
-  if (pxPerYear >= 14) return { unit: 'year', step: 50 }; // semi-centuries
-  if (pxPerYear >= 6) return { unit: 'year', step: 100 }; // centuries
-  // Very zoomed out → very large steps
-  return { unit: 'year', step: 200 };
-}
 // UTC date math + alignment (avoid year 0 labels)
 function startOfYear(year) { return Date.UTC(year, 0, 1); }
 function startOfMonth(year, month1) { return Date.UTC(year, month1 - 1, 1); }

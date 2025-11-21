@@ -1,20 +1,21 @@
-// Updated timeline.js with enhanced zoom, adaptive ticks, and clear labels
-
 // ===== Configuration =====
 const minZoom = 0.2;
 const maxZoom = 500; // allow deep zoom for months/days
 const LABEL_ANCHOR_YEAR = -5000; // start ticks from 5000 BCE
-const INITIAL_CENTER_YEAR = -4000; // center view near 4000 BCEs
+const INITIAL_CENTER_YEAR = -4000; // center view near 4000 BCE
 
 // ===== Canvas and state =====
-document.addEventListener('DOMContentLoaded', () => {
-  const canvas = document.getElementById('timelineCanvas');
-  const ctx = canvas.getContext('2d');
-});
+const canvas = document.getElementById('timelineCanvas');
+const ctx = canvas.getContext('2d');
 let W, H;
 let scale = 1;
 let panX = 0;
 let firstDraw = true;
+
+// Panning state
+let isDragging = false;
+let dragStartX = 0;
+let panStartX = 0;
 
 // ===== Utility functions =====
 function startOfYear(y) { return Date.UTC(y, 0, 1); }
@@ -25,9 +26,7 @@ function formatTickLabel(ts, unit) {
   const d = new Date(ts);
   const y = d.getUTCFullYear();
 
-  if (unit === 'year') {
-    return formatYearHuman(y); // e.g., "4026 BCE" or "2025"
-  }
+  if (unit === 'year') return formatYearHuman(y);
   if (unit === 'month') {
     const m = d.getUTCMonth() + 1;
     const yTxt = (y < 0) ? `${Math.abs(y)} BCE` : `${y}`;
@@ -71,7 +70,6 @@ function alignTickFromAnchor(minTs, anchorYear, unit, step) {
   }
 
   if (unit === 'month') {
-    const anchor = Date.UTC(anchorYear, 0, 1);
     const absMin = dMin.getUTCFullYear() * 12 + dMin.getUTCMonth();
     const absAnc = anchorYear * 12;
     const k = Math.ceil((absMin - absAnc) / step);
@@ -94,7 +92,6 @@ function draw(minTs, maxTs) {
   const { unit, step } = chooseTickScale(pxPerYear);
 
   let t = alignTickFromAnchor(minTs, LABEL_ANCHOR_YEAR, unit, step);
-
   let lastRight = -Infinity;
   const gap = 10;
 
@@ -146,3 +143,39 @@ function zoomOut() { scale = Math.max(scale / 1.3, minZoom); draw(minTs, maxTs);
 let minTs = startOfYear(-5000);
 let maxTs = startOfYear(2100);
 draw(minTs, maxTs);
+
+// ===== Event listeners for zoom buttons =====
+document.getElementById('zoomIn').addEventListener('click', zoomIn);
+document.getElementById('zoomOut').addEventListener('click', zoomOut);
+document.getElementById('resetZoom').addEventListener('click', () => {
+  scale = 1;
+  panX = 0;
+  firstDraw = true;
+  draw(minTs, maxTs);
+});
+
+// ===== Responsive redraw on resize =====
+window.addEventListener('resize', () => draw(minTs, maxTs));
+
+// ===== Panning support =====
+canvas.addEventListener('mousedown', (e) => {
+  isDragging = true;
+  dragStartX = e.clientX;
+  panStartX = panX;
+});
+
+canvas.addEventListener('mousemove', (e) => {
+  if (isDragging) {
+    const dx = e.clientX - dragStartX;
+    panX = panStartX + dx;
+    draw(minTs, maxTs);
+  }
+});
+
+canvas.addEventListener('mouseup', () => {
+  isDragging = false;
+});
+
+canvas.addEventListener('mouseleave', () => {
+  isDragging = false;
+});

@@ -1,6 +1,6 @@
 // ===== Configuration =====
 const minZoom = 0.2;
-const maxZoom = 500; // allow deep zoom for months/days
+const maxZoom = 500; // allow deep zoom
 const LABEL_ANCHOR_YEAR = -5000; // start ticks from 5000 BCE
 const INITIAL_CENTER_YEAR = -4000; // center view near 4000 BCE
 
@@ -23,10 +23,10 @@ function formatYearHuman(y) {
 }
 
 function chooseTickScale(pxPerYear) {
-  if (pxPerYear >= 120) return { unit: 'year', step: 1 };
-  if (pxPerYear >= 40) return { unit: 'year', step: 10 };
-  if (pxPerYear >= 12) return { unit: 'year', step: 100 };
-  return { unit: 'year', step: 1000 };
+  if (pxPerYear >= 120) return { step: 1 };      // 1 year
+  if (pxPerYear >= 40) return { step: 10 };      // 10 years
+  if (pxPerYear >= 12) return { step: 100 };     // 100 years
+  return { step: 1000 };                         // 1000 years
 }
 
 // ===== Main draw function =====
@@ -35,7 +35,7 @@ function draw() {
   H = canvas.height = window.innerHeight;
   ctx.clearRect(0, 0, W, H);
 
-  const { unit, step } = chooseTickScale(scale);
+  const { step } = chooseTickScale(scale);
   let t = Math.ceil((minYear - LABEL_ANCHOR_YEAR) / step) * step + LABEL_ANCHOR_YEAR;
   let lastRight = -Infinity;
   const gap = 10;
@@ -62,6 +62,13 @@ function draw() {
     }
     t += step;
   }
+
+  // Optional: Draw center line
+  ctx.strokeStyle = '#00000033';
+  ctx.beginPath();
+  ctx.moveTo(W / 2, 0);
+  ctx.lineTo(W / 2, H);
+  ctx.stroke();
 }
 
 // ===== Initialization =====

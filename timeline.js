@@ -22,15 +22,18 @@ function formatYearHuman(y) { return y < 0 ? `${Math.abs(y)} BCE` : `${y}`; }
 function formatTickLabel(ts, unit) {
   const d = new Date(ts);
   const y = d.getUTCFullYear();
-  if (unit === 'year') return formatYearHuman(y);
+
+  if (unit === 'year') {
+    return formatYearHuman(y); // e.g., "4026 BCE" or "2025"
+  }
   if (unit === 'month') {
     const m = d.getUTCMonth() + 1;
-    const yTxt = y < 0 ? `${Math.abs(y)} BCE` : `${y}`;
+    const yTxt = (y < 0) ? `${Math.abs(y)} BCE` : `${y}`;
     return `${yTxt}-${String(m).padStart(2,'0')}`;
   }
   if (unit === 'day') {
     const m = d.getUTCMonth() + 1, day = d.getUTCDate();
-    const yTxt = y < 0 ? `${Math.abs(y)} BCE` : `${y}`;
+    const yTxt = (y < 0) ? `${Math.abs(y)} BCE` : `${y}`;
     return `${yTxt}-${String(m).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
   }
   return '';

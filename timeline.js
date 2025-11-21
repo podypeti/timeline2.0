@@ -1,31 +1,47 @@
 // timeline.js — English UI, All/None control chips in legend, adaptive ticks (centuries→days),
 // non-overlapping tick labels, JW.org jwlshare scripture links
-// PATCHED VERSION — includes:
-// • 25-year zoom step
-// • lager label gap for safety
-// • fixed "None" selector bug (timeline remains visible)
-// • safe drawing even when no events visible
 
 // ====== JW.org Bible link (jwlshare → opens JW Library or falls back to JW.org) ======
 const JW_LOCALE = 'E'; // change to 'H' for Hungarian, etc.
-function jwFinderUrl(code8){
-  return 'https://www.jw.org/finder?srcid=jwlshare&wtlocale=' + encodeURIComponent(JW_LOCALE)
-       + '&prefer=lang&bible=' + encodeURIComponent(code8) + '&pub=nwtsty';
+function jwFinderUrl(code8) {
+  return (
+    'https://www.jw.org/finder?srcid=jwlshare&wtlocale=' +
+    encodeURIComponent(JW_LOCALE) +
+    '&prefer=lang&bible=' +
+    encodeURIComponent(code8) +
+    '&pub=nwtsty'
+  );
 }
 
 // ====== Canvas / state ======
 const canvas = document.getElementById('timelineCanvas');
 const ctx = canvas.getContext('2d');
-let zoom = 1, minZoom = 0.2, maxZoom = 20;
-let allEvents = [], visibleEvents = [], rows = [];
-let panX = 0, isPanning = false, panStartClientX = 0, panStartPanX = 0, firstDraw = true;
-let hitRegions = [], suppressNextClick = false;
+
+let zoom = 1;
+const minZoom = 0.2;
+const maxZoom = 20;
+
+let allEvents = [];
+let visibleEvents = [];
+let rows = [];
+
+let panX = 0;
+let isPanning = false;
+let panStartClientX = 0;
+let panStartPanX = 0;
+let firstDraw = true;
+
+let hitRegions = [];
+let suppressNextClick = false;
 
 // ====== Load CSV ======
 fetch('timeline-data.csv')
-  .then(r => { if (!r.ok) throw new Error('CSV HTTP ' + r.status); return r.text(); })
-  .then(t => parseCSV(t))
-  .then(data => {
+  .then((r) => {
+    if (!r.ok) throw new Error('CSV HTTP ' + r.status);
+    return r.text();
+  })
+  .then((t) => parseCSV(t))
+  .then((data) => {
     allEvents = data;
     initFiltersFromData();
     applyFiltersAndPack();
@@ -33,37 +49,737 @@ fetch('timeline-data.csv')
     draw();
     console.log('Loaded events:', visibleEvents.length);
   })
-  .catch(err => { console.error('CSV load failed:', err); message('Failed to load timeline data.'); });
+  .catch((err) => {
+    console.error('CSV load failed:', err);
+    message('Failed to load timeline data.');
+  });
 
-function message(msg){
-  canvas.width=canvas.clientWidth; canvas.height=canvas.clientHeight;
-  ctx.clearRect(0,0,canvas.width,canvas.clientHeight);
-  ctx.fillStyle='#000'; ctx.font='14px Arial'; ctx.fillText(msg, 10, 30);
+function message(msg) {
+  canvas.width = canvas.clientWidth;
+  canvas.height = canvas.clientHeight;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = '#000';
+  ctx.font = '14px Arial';
+  ctx.fillText(msg, 10, 30);
 }
 
-// ====== CSV parser (unchanged) ======
-// (same CSV parsing code as before — omitted here for brevity because unchanged)
-// COPY YOUR ORIGINAL CSV PARSER HERE WITHOUT CHANGES
-// I WILL INCLUDE IT IN FINAL DELIVERY (ChatGPT compresses in long files)
-
-///////////////////////////////////////////////////////////////
-// FULL CSV PARSER CODE FROM ORIGINAL (NO CHANGES)
-///////////////////////////////////////////////////////////////
-
-function csvSplit(line){ const out=[]; let cur='', q=false;
-  for(let i=0;i<line.length;i++){
-    const ch=line[i];
-    if(ch==='\"'){ if(q && line[i+1]==='\"'){ cur+='\"'; i++; } else q=!q; }
-    else if(ch===',' && !q){ out.push(cur); cur=''; }
-    else cur+=ch;
+// ====== CSV parser (tracks date precision) ======
+function csvSplit(line) {
+  const out = [];
+  let cur = '';
+  let q = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') {
+      if (q && line[i + 1] === '"') {
+        cur += '"';
+        i++;
+      } else q = !q;
+    } else if (ch === ',' && !q) {
+      out.push(cur);
+      cur = '';
+    } else cur += ch;
   }
-  out.push(cur); return out;
+  out.push(cur);
+  return out;
 }
-function parseTimeString(s){ if(!s) return [0,0,0]; const p=s.split(':').map(x=>parseInt(x,10)); return [isNaN(p[0])?0:p[0], isNaN(p[1])?0:p[1], isNaN(p[2])?0:p[2]]; }
-function toTs(year, month, day, timeStr){
-  if(isNaN(year)||year===null) return NaN;
-  const y=parseInt(year,10);
-  const mo=isNaN(parseInt(month,10))?1:parseInt(month,10);
+function parseTimeString(s) {
+  if (!s) return [0, 0, 0];
+  const p = s.split(':').map((x) => parseInt(x, 10));
+  return [isNaN(p[0]) ? 0 : p[0], isNaN(p[1]) ? 0 : p[1], isNaN(p[2]) ? 0 : p[2]];
+}
+function toTs(year, month, day, timeStr) {
+  if (isNaN(year) || year === null) return NaN;
+  const y = parseInt(year, 10);
+  const mo = isNaN(parseInt(month, 10)) ? 1 : parseInt(month, 10);
+  const d = isNaN(parseInt(day, 10)) ? 1 : parseInt(day, 10);
+  const [h, m, s] = parseTimeString(timeStr);
+  return Date.UTC(y, Math.max(0, mo - 1), Math.max(1, d), h, m, s);
+}
+function parseCSV(text) {
+  if (!text) return [];
+  const raw = text.split(/\r?\n/);
+  const lines = raw.filter((l, i) => i === 0 || String(l).trim().length > 0);
+  if (lines.length === 0) return [];
+  const head = csvSplit(lines[0]).map((h) => h.trim());
+  const map = {};
+  head.forEach((h, i) => {
+    map[h.toLowerCase()] = i;
+  });
+  const out = [];
+  for (let i = 1; i < lines.length; i++) {
+    const parts = csvSplit(lines[i]);
+    if (!parts || parts.length === 0) continue;
+    const norm = {};
+    Object.keys(map).forEach((k) => {
+      const idx = map[k];
+      const rawVal = parts[idx] !== undefined ? parts[idx] : '';
+      const v = ('' + rawVal).trim().replace(/^"(.*)"$/, '$1');
+      norm[k] = v;
+    });
+    const title = norm.headline || norm.title || norm.name || '';
+    const type = norm.type || '';
+    const group = norm.group || '';
+    const media = norm.media || '';
+    const textField = norm.text || norm['display date'] || '';
+    const y = parseInt(norm.year, 10);
+    const mo = norm.month;
+    const d = norm.day;
+    const timeStr = norm.time || norm['time'] || '';
+    const hasMonth = !isNaN(parseInt(mo, 10));
+    const hasDay = !isNaN(parseInt(d, 10));
+    let start = toTs(y, mo, d, timeStr);
+    let startPrec = hasDay ? 'day' : hasMonth ? 'month' : 'year';
+    const endYear = parseInt(norm['end year'], 10);
+    let end = NaN;
+    let endPrec = startPrec;
+    if (!isNaN(endYear)) {
+      const emo = norm['end month'];
+      const ed = norm['end day'];
+      const et = norm['end time'] || '';
+      const eHasMonth = !isNaN(parseInt(emo, 10));
+      const eHasDay = !isNaN(parseInt(ed, 10));
+      end = toTs(endYear, emo, ed, et);
+      endPrec = eHasDay ? 'day' : eHasMonth ? 'month' : 'year';
+    }
+    // Fallbacks if "year/month/day" absent but "start" or "start date" present
+    if (isNaN(start)) {
+      const single = norm.start || norm['start date'] || norm['display date'];
+      if (single) {
+        const d2 = new Date(single);
+        if (!isNaN(d2)) {
+          start = d2.getTime();
+          startPrec = 'day';
+        }
+      }
+    }
+    if (isNaN(start)) continue;
+    if (isNaN(end)) {
+      end = start;
+      endPrec = startPrec;
+    }
+    if (end < start) {
+      const tmp = start;
+      start = end;
+      end = tmp;
+      const tp = startPrec;
+      startPrec = endPrec;
+      endPrec = tp;
+    }
+    out.push({
+      title,
+      start,
+      end,
+      type,
+      group,
+      media,
+      text: textField,
+      raw: norm,
+      startPrec,
+      endPrec,
+    });
+  }
+  return out;
+}
+
+// ====== Filters & legend ======
+const activeGroups = new Set();
+let availableGroups = []; // [{label, keyLower}]
+const chipIndex = new Map(); // keyLower -> chip element
+
+function groupKeyFor(ev) {
+  return (ev.group || ev.type || '(Other)').trim();
+}
+function initFiltersFromData() {
+  const seen = new Map();
+  allEvents.forEach((ev) => {
+    const label = groupKeyFor(ev);
+    const key = label.toLowerCase();
+    if (!seen.has(key)) seen.set(key, label);
+  });
+  availableGroups = [...seen.entries()].map(([k, l]) => ({ label: l, keyLower: k }));
+  activeGroups.clear();
+  availableGroups.forEach((g) => activeGroups.add(g.keyLower));
+}
+function applyFiltersAndPack() {
+  visibleEvents = allEvents.filter((ev) => activeGroups.has(groupKeyFor(ev).toLowerCase()));
+  packRows();
+}
+function buildLegend() {
+  const host = document.getElementById('legend');
+  if (!host) return;
+  host.innerHTML = '';
+  chipIndex.clear();
+
+  // --- Control chips: "All" and "None" ---
+  const mkControlChip = (label, action) => {
+    const chip = document.createElement('div');
+    chip.className = 'chip';
+    chip.setAttribute('data-role', 'control');
+    chip.innerHTML = `<span class="swatch" style="background:#0000"></span><span>${label}</span>`;
+    chip.addEventListener('click', () => {
+      if (action === 'all') {
+        activeGroups.clear();
+        availableGroups.forEach((g) => activeGroups.add(g.keyLower));
+      } else if (action === 'none') {
+        activeGroups.clear();
+      }
+      // update all category chips' visual state
+      chipIndex.forEach((el, key) => {
+        if (el.getAttribute('data-role') === 'control') return;
+        el.classList.toggle('inactive', !activeGroups.has(key));
+      });
+      applyFiltersAndPack();
+      draw();
+    });
+    return chip;
+  };
+  host.appendChild(mkControlChip('All', 'all'));
+  host.appendChild(mkControlChip('None', 'none'));
+
+  // --- Category chips ---
+  availableGroups.forEach(({ label, keyLower }) => {
+    const color = COLOR_MAP[keyLower] ?? COLOR_MAP[''];
+    const chip = document.createElement('div');
+    chip.className = 'chip' + (activeGroups.has(keyLower) ? '' : ' inactive');
+    chip.setAttribute('data-key', keyLower);
+    chip.innerHTML = `<span class="swatch" style="background:${color}"></span><span>${label}</span>`;
+    chip.addEventListener('click', () => {
+      if (activeGroups.has(keyLower)) activeGroups.delete(keyLower);
+      else activeGroups.add(keyLower);
+      chip.classList.toggle('inactive');
+      applyFiltersAndPack();
+      draw();
+    });
+    host.appendChild(chip);
+    chipIndex.set(keyLower, chip);
+  });
+
+  console.log('Legend built with All/None +', availableGroups.length, 'groups');
+}
+
+// ====== Colors ======
+const COLOR_MAP = {
+  events: '#1f77b4',
+  persons: '#2ca02c',
+  covenants: '#8c564b',
+  'time periods': '#9467bd',
+  'bible writing': '#d62728',
+  'world powers': '#ff7f0e',
+  prophets: '#17becf',
+  judges: '#bcbd22',
+  'kings of israel': '#e377c2',
+  'kings of judah': '#7f7f7f',
+  jesus: '#9c27b0',
+  'king of the north': '#795548',
+  'king of the south': '#607d8b',
+  "paul's journeys": '#00acc1',
+  'bible copy/translation': '#009688',
+  'modern day history of jw': '#ff6f00',
+  '(other)': '#007BFF',
+  person: '#2ca02c',
+  era: '#dc3545',
+  '': '#007BFF',
+};
+function colorFor(ev) {
+  const g = groupKeyFor(ev).toLowerCase();
+  const t = (ev.type || '').toLowerCase().trim();
+  return COLOR_MAP[g] || COLOR_MAP[t] || COLOR_MAP[''];
+}
+
+// ====== Scripture linking → jwlshare ======
+const BOOK_TOKEN_RE =
+  /^(Gen|Ex|Lev|Num|Deut|Josh|Jg|Judg|Ruth|1\s?Sam|2\s?Sam|1\s?Ki|2\s?Ki|1\s?Ch|2\s?Ch|Chron|Ezra|Neh|Esth?|Job|Ps|Prov|Eccl|Song|Isa|Jer|Lam|Ezek|Dan|Hos|Joel|Amos|Obad|Jonah?|Mic|Nah|Zeph|Hag|Zech|Mal|Matt|Mt|Mark|Mrk|Luke|Lu|John|Jn|Acts|Rom|Ro|1\s?Cor|2\s?Cor|Gal|Eph|Phil|Col|1\s?Thess|2\s?Thess|1\s?Tim|2\s?Tim|Titus|Philem|Heb|Jas|James|1\s?Pet|2\s?Pet|1\s?John|2\s?John|3\s?John|Jude|Rev)\.?$/i;
+// e.g., "Matt 24:3" or "24:3"
+const REF_RE = /^(\d+):(\d+)(?:[-–](\d+))?$/;
+const BOOK_CODE = {
+  genesis: '01',
+  gen: '01',
+  ge: '01',
+  gn: '01',
+  exodus: '02',
+  ex: '02',
+  leviticus: '03',
+  lev: '03',
+  le: '03',
+  numbers: '04',
+  num: '04',
+  nu: '04',
+  nm: '04',
+  nb: '04',
+  deuteronomy: '05',
+  deut: '05',
+  de: '05',
+  dt: '05',
+  joshua: '06',
+  josh: '06',
+  jos: '06',
+  jo: '06',
+  judges: '07',
+  judg: '07',
+  jg: '07',
+  ruth: '08',
+  ru: '08',
+  '1 samuel': '09',
+  '1sam': '09',
+  '1 sam': '09',
+  '1sa': '09',
+  'i sam': '09',
+  '1sm': '09',
+  '2 samuel': '10',
+  '2sam': '10',
+  '2 sam': '10',
+  '2sa': '10',
+  'ii sam': '10',
+  '2sm': '10',
+  '1 kings': '11',
+  '1ki': '11',
+  '1 kgs': '11',
+  'i ki': '11',
+  '2 kings': '12',
+  '2ki': '12',
+  '2 kgs': '12',
+  'ii ki': '12',
+  '1 chronicles': '13',
+  '1ch': '13',
+  'i ch': '13',
+  '1 chron': '13',
+  '2 chronicles': '14',
+  '2ch': '14',
+  'ii ch': '14',
+  '2 chron': '14',
+  ezra: '15',
+  ezr: '15',
+  nehemiah: '16',
+  neh: '16',
+  esther: '17',
+  esth: '17',
+  es: '17',
+  job: '18',
+  jb: '18',
+  psalms: '19',
+  ps: '19',
+  psalm: '19',
+  proverbs: '20',
+  prov: '20',
+  pr: '20',
+  ecclesiastes: '21',
+  eccl: '21',
+  ec: '21',
+  'song of solomon': '22',
+  song: '22',
+  so: '22',
+  canticles: '22',
+  'song of songs': '22',
+  isaiah: '23',
+  isa: '23',
+  is: '23',
+  jeremiah: '24',
+  jer: '24',
+  je: '24',
+  lamentations: '25',
+  lam: '25',
+  la: '25',
+  ezekiel: '26',
+  eze: '26',
+  ezek: '26',
+  ek: '26',
+  daniel: '27',
+  dan: '27',
+  da: '27',
+  hosea: '28',
+  hos: '28',
+  ho: '28',
+  joel: '29',
+  joe: '29',
+  jl: '29',
+  amos: '30',
+  am: '30',
+  obadiah: '31',
+  obad: '31',
+  ob: '31',
+  jonah: '32',
+  jon: '32',
+  jh: '32',
+  micah: '33',
+  mic: '33',
+  mi: '33',
+  nahum: '34',
+  nah: '34',
+  na: '34',
+  habakkuk: '35',
+  hab: '35',
+  hb: '35',
+  zephaniah: '36',
+  zeph: '36',
+  zp: '36',
+  haggai: '37',
+  hag: '37',
+  hg: '37',
+  zechariah: '38',
+  zech: '38',
+  zc: '38',
+  malachi: '39',
+  mal: '39',
+  ml: '39',
+  matthew: '40',
+  matt: '40',
+  mt: '40',
+  mark: '41',
+  mrk: '41',
+  mk: '41',
+  mr: '41',
+  luke: '42',
+  lu: '42',
+  lk: '42',
+  john: '43',
+  jn: '43',
+  joh: '43',
+  acts: '44',
+  ac: '44',
+  romans: '45',
+  rom: '45',
+  ro: '45',
+  '1 corinthians': '46',
+  '1 cor': '46',
+  'i cor': '46',
+  '1co': '46',
+  '2 corinthians': '47',
+  '2 cor': '47',
+  'ii cor': '47',
+  '2co': '47',
+  galatians: '48',
+  gal: '48',
+  ga: '48',
+  ephesians: '49',
+  eph: '49',
+  ep: '49',
+  philippians: '50',
+  phil: '50',
+  php: '50',
+  colossians: '51',
+  col: '51',
+  co: '51',
+  '1 thessalonians': '52',
+  '1 thess': '52',
+  '1 th': '52',
+  '1ts': '52',
+  '2 thessalonians': '53',
+  '2 thess': '53',
+  '2 th': '53',
+  '2ts': '53',
+  '1 timothy': '54',
+  '1 tim': '54',
+  '1ti': '54',
+  '2 timothy': '55',
+  '2 tim': '55',
+  '2ti': '55',
+  titus: '56',
+  tit: '56',
+  ti: '56',
+  philemon: '57',
+  philem: '57',
+  phm: '57',
+  hebrews: '58',
+  heb: '58',
+  he: '58',
+  james: '59',
+  jas: '59',
+  jm: '59',
+  '1 peter': '60',
+  '1 pet': '60',
+  '1pe': '60',
+  '2 peter': '61',
+  '2 pet': '61',
+  '2pe': '61',
+  '1 john': '62',
+  '1 john': '62',
+  '1jn': '62',
+  '2 john': '63',
+  '2jn': '63',
+  '3 john': '64',
+  '3jn': '64',
+  jude: '65',
+  jud: '65',
+  jd: '65',
+  revelation: '66',
+  rev: '66',
+  re: '66',
+};
+function normBookKey(raw) {
+  return String(raw || '')
+    .trim()
+    .replace(/\.$/, '')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .replace(/^i\s/, '1 ')
+    .replace(/^ii\s/, '2 ')
+    .replace(/^iii\s/, '3 ');
+}
+function jwCodeFor(book, ch, vs) {
+  const code = BOOK_CODE[normBookKey(book)];
+  if (!code) return null;
+  const cc = String(parseInt(ch, 10)).padStart(3, '0');
+  const vv = String(parseInt(vs || 0, 10)).padStart(3, '0');
+  return code + cc + vv;
+}
+function escapeHtml(s) {
+  return String(s || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+function linkifyScripture(text) {
+  const tokens = String(text || '').split(/(\s+)/);
+  let out = '';
+  let lastBook = null;
+  for (let i = 0; i < tokens.length; ) {
+    const tk = tokens[i];
+    if (/\s+/.test(tk)) {
+      out += tk;
+      i++;
+      continue;
+    }
+    const next = tokens[i + 1] || '';
+    const next2 = tokens[i + 2] || '';
+    if (BOOK_TOKEN_RE.test(tk) && /\s+/.test(next) && REF_RE.test(next2)) {
+      lastBook = tk;
+      const m = REF_RE.exec(next2);
+      const code8 = jwCodeFor(tk, m[1], m[2]);
+      const label = tk + next + next2;
+      out += code8
+        ? '<a target="_blank" rel="noopener" href="' +
+          jwFinderUrl(code8) +
+          '">' +
+          escapeHtml(label) +
+          '</a>'
+        : escapeHtml(label);
+      i += 3;
+      continue;
+    }
+    if (REF_RE.test(tk) && lastBook) {
+      const m = REF_RE.exec(tk);
+      const code8 = jwCodeFor(lastBook, m[1], m[2]);
+      out += code8
+        ? '<a target="_blank" rel="noopener" href="' +
+          jwFinderUrl(code8) +
+          '">' +
+          escapeHtml(tk) +
+          '</a>'
+        : escapeHtml(tk);
+      i++;
+      continue;
+    }
+    if (BOOK_TOKEN_RE.test(tk)) lastBook = tk;
+    out += escapeHtml(tk);
+    i++;
+  }
+  return out.replace(/<br\s*\/?>/gi, '<br>');
+}
+
+// ====== Draw empty timeline (for "None" filter) ======
+function drawEmptyTimeline() {
+  canvas.width = canvas.clientWidth;
+  canvas.height = canvas.clientHeight;
+
+  hitRegions = [];
+  const W = canvas.width;
+  const H = canvas.clientHeight;
+  const topPadding = 6;
+  const labelH = 26;
+  const timelineY = topPadding + labelH;
+
+  ctx.clearRect(0, 0, W, H);
+
+  // Axis
+  ctx.strokeStyle = '#222';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(0, timelineY);
+  ctx.lineTo(W, timelineY);
+  ctx.stroke();
+
+  // Message
+  ctx.font = '14px Arial';
+  ctx.fillStyle = '#000';
+  ctx.fillText('No events selected', 10, timelineY + 20);
+}
+
+// ====== Draw ======
+function draw() {
+  canvas.width = canvas.clientWidth;
+  canvas.height = canvas.clientHeight;
+  hitRegions = [];
+
+  const W = canvas.width;
+  const H = canvas.clientHeight;
+  const topPadding = 6;
+  const labelH = 26;
+  const timelineY = topPadding + labelH;
+  const rowH = 40;
+
+  // If no events visible → still draw axis, but show message
+  if (!visibleEvents || visibleEvents.length === 0) {
+    drawEmptyTimeline();
+    return;
+  }
+
+  ctx.clearRect(0, 0, W, H);
+
+  let minTs = Math.min(...visibleEvents.map((e) => e.start));
+  let maxTs = Math.max(...visibleEvents.map((e) => e.end));
+
+  if (!isFinite(minTs) || !isFinite(maxTs)) {
+    message('Invalid event dates');
+    return;
+  }
+  if (minTs === maxTs) {
+    minTs -= 86400000;
+    maxTs += 86400000;
+  }
+  const span = (maxTs - minTs) || 1;
+  const scale = (W * zoom) / span;
+
+  if (firstDraw) {
+    const content = W * zoom;
+    panX = content <= W ? (W - content) / 2 : 0;
+    firstDraw = false;
+  }
+
+  panX = clampPanForSize(W);
+  const xOfTs = (ts) => (ts - minTs) * scale + panX;
+
+  // main axis
+  ctx.strokeStyle = '#222';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(0, timelineY);
+  ctx.lineTo(W, timelineY);
+  ctx.stroke();
+
+  // ====== Adaptive timeline labels (centuries → 50y → 25y → decades → years → months → days) ======
+  const msPerYear = 365.2425 * 24 * 3600 * 1000;
+  const pxPerYear = scale * msPerYear;
+  const tickScale = chooseTickScale(pxPerYear); // {unit, step}
+  const unit = tickScale.unit;
+  const step = tickScale.step;
+
+  ctx.font = '12px Arial';
+  ctx.textBaseline = 'middle';
+  const gap = 12; // safer spacing
+  let lastRight = -Infinity;
+
+  let t = alignTick(minTs, unit, step);
+  while (t <= maxTs) {
+    // Skip label exactly at year 0
+    if (unit === 'year') {
+      const y0 = new Date(t).getUTCFullYear();
+      if (y0 === 0) {
+        t = addYears(t, step);
+        continue;
+      }
+    }
+
+    const x = xOfTs(t);
+    if (x > W + 200) break; // off to the right: done
+    if (x >= -200) {
+      const text = formatTickLabel(t, unit);
+      if (text) {
+        const textW = ctx.measureText(text).width;
+        const pillW = textW + 10;
+        const pillH = 18;
+        const pillX = x - pillW / 2;
+        const pillY = topPadding;
+        const left = Math.max(4, pillX);
+        const right = left + pillW;
+
+        // Prevent overlap
+        if (left > lastRight + gap) {
+          // draw label pill
+          ctx.fillStyle = '#ffffffee';
+          ctx.strokeStyle = '#00000022';
+          roundRect(ctx, left, pillY, pillW, pillH, 6, true, false);
+
+          ctx.fillStyle = '#000';
+          ctx.fillText(text, left + 5, pillY + pillH / 2);
+
+          // guide to axis
+          ctx.strokeStyle = '#00000033';
+          ctx.beginPath();
+          ctx.moveTo(x, pillY + pillH);
+          ctx.lineTo(x, timelineY - 4);
+          ctx.stroke();
+
+          lastRight = right;
+        }
+      }
+    }
+
+    // Advance tick
+    if (unit === 'year') t = addYears(t, step);
+    else if (unit === 'month') t = addMonths(t, step);
+    else t = addDays(t, step);
+  }
+
+  // rows and events
+  rows.forEach((row, i) => {
+    const yTop = timelineY + 18 + i * rowH;
+    row.forEach((ev) => {
+      const x1 = xOfTs(ev.start);
+      const x2 = xOfTs(ev.end);
+      const left = Math.min(x1, x2);
+      const right = Math.max(x1, x2);
+      const w = right - left;
+      const color = colorFor(ev);
+      const stickX = w < 10 ? x1 : left;
+
+      // guide from axis
+      ctx.save();
+      ctx.setLineDash([3, 4]);
+      ctx.strokeStyle = color + 'AA';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(stickX, timelineY);
+      ctx.lineTo(stickX, yTop + 10);
+      ctx.stroke();
+      ctx.restore();
+
+      if (w >= 10) {
+        ctx.fillStyle = color;
+        const barX = left;
+        const barY = yTop + 18;
+        const barW = Math.max(6, w);
+        const barH = 6;
+        ctx.fillRect(barX, barY, barW, barH);
+        hitRegions.push({ x: barX, y: barY - 4, w: barW, h: barH + 8, ev, kind: 'bar' });
+      } else {
+        const r = 4;
+        ctx.beginPath();
+        ctx.fillStyle = color;
+        ctx.arc(stickX, yTop + 21, r, 0, Math.PI * 2);
+        ctx.fill();
+        hitRegions.push({ x: stickX - 6, y: yTop + 15, w: 12, h: 12, ev, kind: 'dot' });
+      }
+
+      // label flag
+      const title = ev.title || '';
+      const dateTxt = displayWhen(ev);
+      const lines = wrapText(ctx, title, 320, 'bold 12px Arial').concat(
+        wrapText(ctx, dateTxt, 320, '11px Arial'),
+      );
+      const padX = 8;
+      const padY = 6;
+      const lineGap = 2;
+      const heights = lines.map((l) => (l.font.startsWith('bold') ? 13 : 12));
+      const textW = Math.min(
+        360,
+        Math.max(...lines.map((l) => ctx.measureText(l.text).width)),
+      );
+      const pillW = Math.max(120, textW + padX * 2);
+      const pillH =
+        padY * 2 + heights.reduce((a, b)   const mo=isNaN(parseInt(month,10))?1:parseInt(month,10);
   const d=isNaN(parseInt(day,10))?1:parseInt(day,10);
   const [h,m,s]=parseTimeString(timeStr);
   return Date.UTC(y, Math.max(0,mo-1), Math.max(1,d), h,m,s);

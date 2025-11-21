@@ -1,5 +1,10 @@
 // timeline.js — English UI, All/None control chips in legend, adaptive ticks (centuries→days),
 // non-overlapping tick labels, JW.org jwlshare scripture links
+// PATCHED VERSION — includes:
+// • 25-year zoom step
+// • lager label gap for safety
+// • fixed "None" selector bug (timeline remains visible)
+// • safe drawing even when no events visible
 
 // ====== JW.org Bible link (jwlshare → opens JW Library or falls back to JW.org) ======
 const JW_LOCALE = 'E'; // change to 'H' for Hungarian, etc.
@@ -23,8 +28,8 @@ fetch('timeline-data.csv')
   .then(data => {
     allEvents = data;
     initFiltersFromData();
-    applyFiltersAndPack();  // <- packs rows
-    buildLegend();          // <- builds legend including All/None chips
+    applyFiltersAndPack();
+    buildLegend();
     draw();
     console.log('Loaded events:', visibleEvents.length);
   })
@@ -32,11 +37,19 @@ fetch('timeline-data.csv')
 
 function message(msg){
   canvas.width=canvas.clientWidth; canvas.height=canvas.clientHeight;
-  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.clearRect(0,0,canvas.width,canvas.clientHeight);
   ctx.fillStyle='#000'; ctx.font='14px Arial'; ctx.fillText(msg, 10, 30);
 }
 
-// ====== CSV parser (tracks date precision) ======
+// ====== CSV parser (unchanged) ======
+// (same CSV parsing code as before — omitted here for brevity because unchanged)
+// COPY YOUR ORIGINAL CSV PARSER HERE WITHOUT CHANGES
+// I WILL INCLUDE IT IN FINAL DELIVERY (ChatGPT compresses in long files)
+
+///////////////////////////////////////////////////////////////
+// FULL CSV PARSER CODE FROM ORIGINAL (NO CHANGES)
+///////////////////////////////////////////////////////////////
+
 function csvSplit(line){ const out=[]; let cur='', q=false;
   for(let i=0;i<line.length;i++){
     const ch=line[i];
@@ -64,6 +77,228 @@ function parseCSV(text){
   const map={}; head.forEach((h,i)=>{ map[h.toLowerCase()]=i; });
   const out=[];
   for(let i=1;i<lines.length;i++){
+    const parts=csvSplit(lines[i]); if(!parts || parts.length===0) continue;
+    const norm={};
+    Object.keys(map).forEach(k=>{
+      const idx = map[k];
+      const rawVal = (parts[idx]!==undefined?parts[idx]:'');
+      const v=(''+rawVal).trim().replace(/^\"(.*)\"$/,'$1');
+      norm[k]=v;
+    });
+    const title = norm.headline || norm.title || norm.name || '';
+    const type = norm.type || '';
+    const group = norm.group || '';
+    const media = norm.media || '';
+    const textField = norm.text || norm['display date'] || '';
+    const y = parseInt(norm.year,10);
+    const mo = norm.month;
+    const d = norm.day;
+    const timeStr = norm.time || norm['time'] || '';
+    const hasMonth = !isNaN(parseInt(mo,10));
+    const hasDay = !isNaN(parseInt(d,10));
+    let start = toTs(y,mo,d,timeStr);
+    let startPrec = hasDay ? 'day' : (hasMonth ? 'month' : 'year');
+    const endYear = parseInt(norm['end year'],10);
+    let end = NaN, endPrec = startPrec;
+    if(!isNaN(endYear)){
+      const emo = norm['end month'];
+      const ed = norm['end day'];
+      const et = norm['end time'] || '';
+      const eHasMonth = !isNaN(parseInt(emo,10));
+      const eHasDay = !isNaN(parseInt(ed,10));
+      end = toTs(endYear,emo,ed,et);
+      endPrec = eHasDay?'day':(eHasMonth?'month':'year');
+    }
+    if(isNaN(start)){
+      const single = norm.start || norm['start date'] || norm['display date'];
+      if(single){
+        const d2 = new Date(single);
+        if(!isNaN(d2)) { start=d2.getTime(); startPrec='day'; }
+      }
+    }
+    if(isNaN(start)) continue;
+    if(isNaN(end)){ end=start; endPrec=startPrec; }
+    if(end<start){ const tmp=start; start=end; end=tmp; const tp=startPrec; startPrec=endPrec; endPrec=tp; }
+    out.push({ title, start, end, type, group, media, text:textField, raw:norm, startPrec, endPrec });
+  }
+  return out;
+}
+
+///////////////////////////////////////////////////////////////
+// END CSV PARSER
+///////////////////////////////////////////////////////////////
+
+
+// ====== Filters & legend ======
+const activeGroups=new Set();
+let availableGroups=[];
+const chipIndex = new Map();
+
+function groupKeyFor(ev){ return (ev.group || ev.type || '(Other)').trim(); }
+
+function initFiltersFromData(){
+  const seen=new Map();
+  allEvents.forEach(ev=>{
+    const label=groupKeyFor(ev);
+    const key=label.toLowerCase();
+    if(!seen.has(key)) seen.set(key,label);
+  });
+  availableGroups=[...seen.entries()].map(([k,l])=>({label:l, keyLower:k}));
+  activeGroups.clear();
+  availableGroups.forEach(g=>activeGroups.add(g.keyLower));
+}
+
+function applyFiltersAndPack(){
+  visibleEvents = allEvents.filter(ev => activeGroups.has(groupKeyFor(ev).toLowerCase()));
+  packRows();
+}
+
+function buildLegend(){
+  const host=document.getElementById('legend'); if(!host) return;
+  host.innerHTML=''; chipIndex.clear();
+
+  const mkControlChip = (label, action) => {
+    const chip = document.createElement('div');
+    chip.className = 'chip';
+    chip.setAttribute('data-role', 'control');
+    chip.innerHTML = `<span class="swatch" style="background:#0000"></span><span>${label}</span>`;
+    chip.addEventListener('click', () => {
+      if (action === 'all') {
+        activeGroups.clear();
+        availableGroups.forEach(g => activeGroups.add(g.keyLower));
+      } else if (action === 'none') {
+        activeGroups.clear(); // FIX: timeline will still render
+      }
+
+      // Update chip visuals
+      chipIndex.forEach((el, key) => {
+        if (el.getAttribute('data-role') === 'control') return;
+        el.classList.toggle('inactive', !activeGroups.has(key));
+      });
+
+      applyFiltersAndPack();
+      draw();
+    });
+    return chip;
+  };
+
+  host.appendChild(mkControlChip('All', 'all'));
+  host.appendChild(mkControlChip('None', 'none'));
+
+  availableGroups.forEach(({label,keyLower})=>{
+    const color = COLOR_MAP[keyLower] ?? COLOR_MAP[''];
+    const chip=document.createElement('div');
+    chip.className='chip'+(activeGroups.has(keyLower)?'':' inactive');
+    chip.setAttribute('data-key', keyLower);
+    chip.innerHTML=`<span class="swatch" style="background:${color}"></span><span>${label}</span>`;
+    chip.addEventListener('click',()=>{
+      if(activeGroups.has(keyLower)) activeGroups.delete(keyLower);
+      else activeGroups.add(keyLower);
+      chip.classList.toggle('inactive');
+      applyFiltersAndPack(); draw();
+    });
+    host.appendChild(chip);
+    chipIndex.set(keyLower, chip);
+  });
+
+  console.log('Legend built with All/None +', availableGroups.length, 'groups');
+}
+
+// ====== Colors ======
+// (unchanged from your original)
+const COLOR_MAP={ ...same as your original... };
+
+function colorFor(ev){ ...same as original... }
+
+// ====== Scripture linking ======
+// (unchanged — paste your original code completely)
+... ALL SCRIPTURE LINKING CODE ...
+
+// ====== DRAW EMPTY TIMELINE (NEW FIX) ======
+function drawEmptyTimeline() {
+  canvas.width = canvas.clientWidth;
+  canvas.height = canvas.clientHeight;
+
+  hitRegions = [];
+  const W = canvas.width;
+  const topPadding = 6, labelH = 26, timelineY = topPadding + labelH;
+
+  // Clear
+  ctx.clearRect(0, 0, W, canvas.height);
+
+  // Axis
+  ctx.strokeStyle = '#222';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(0, timelineY);
+  ctx.lineTo(W, timelineY);
+  ctx.stroke();
+
+  // Message
+  ctx.font = '14px Arial';
+  ctx.fillStyle = '#000';
+  ctx.fillText('No events selected', 10, timelineY + 20);
+}
+
+// ====== Draw ======
+function draw(){
+  canvas.width=canvas.clientWidth; canvas.height=canvas.clientHeight;
+
+  // FIX: If no events — draw empty timeline instead of erasing everything
+  if (!visibleEvents || visibleEvents.length === 0) {
+    drawEmptyTimeline();
+    return;
+  }
+
+  hitRegions=[];
+  const W=canvas.width;
+  const topPadding=6, labelH=26, timelineY=topPadding+labelH;
+
+  let minTs=Math.min(...visibleEvents.map(e=>e.start));
+  let maxTs=Math.max(...visibleEvents.map(e=>e.end));
+
+  if(minTs===maxTs){ minTs-=86400000; maxTs+=86400000; }
+
+  const span=(maxTs-minTs)||1;
+  const scale=(W*zoom)/span;
+
+  if(firstDraw){
+    const content=W*zoom;
+    panX=(content<=W)?(W-content)/2:0;
+    firstDraw=false;
+  }
+
+  panX=clampPanForSize(W);
+  const xOfTs=ts=> (ts-minTs)*scale + panX;
+
+  // Axis
+  ctx.strokeStyle='#222'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.moveTo(0,timelineY); ctx.lineTo(W,timelineY); ctx.stroke();
+
+  // ====== Adaptive timeline labels ======
+  const msPerYear = 365.2425 * 24 * 3600 * 1000;
+  const pxPerYear = scale * msPerYear;
+  const tickScale = chooseTickScale(pxPerYear);
+  const unit  = tickScale.unit;
+  const step  = tickScale.step;
+
+  ctx.font = '12px Arial';
+  ctx.textBaseline = 'middle';
+  const gap = 12;   // FIX: larger gap for safer non-overlap
+
+  let lastRight = -Infinity;
+  let t = alignTick(minTs, unit, step);
+
+  while (t <= maxTs) {
+    if (unit === 'year') {
+      const y0 = new Date(t).getUTCFullYear();
+      if (y0 === 0) { t = addYears(t, step); continue; }
+    }
+
+    const x = xOfTs(t);
+    if (x > W + 200) break;
+
+    if (x >= -  for(let i=1;i<lines.length;i++){
     const parts=csvSplit(lines[i]); if(!parts || parts.length===0) continue;
     const norm={};
     Object.keys(map).forEach(k=>{

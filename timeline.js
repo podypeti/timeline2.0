@@ -27,9 +27,10 @@ let isDragging = false;
 let dragStartX = 0;
 let events = [];                // CSV-ből betöltött események
 let drawHitRects = [];          // képernyő-koordináták hit-testhez (pontok és sávok)
-let activeGroups = new Set();   // legend szűrés (ha üres: minden aktív)
+let activeGroups = new Set();   // legend szűrés (custom módban használjuk)
 let groupColors = new Map();    // Group -> szín
 let groupChips = new Map();     // Group -> chip elem (class toggle-hoz)
+let filterMode = 'all';         // 'all' | 'none' | 'custom'
 
 // ===== Utils =====
 function sizeCanvasToCss() {
@@ -75,6 +76,13 @@ function xForYear(year) {
 
 function yearForX(x) {
   return MIN_YEAR + (x - panX) / scale;
+}
+
+function isGroupVisible(group) {
+  if (filterMode === 'all')  return true;
+  if (filterMode === 'none') return false;
+  // custom
+  return activeGroups.has(group);
 }
 
 // ===== Rounded-rect fallback (Path2D) =====
@@ -172,15 +180,15 @@ function buildLegend() {
   };
 
   addAdminChip('All', () => {
-    activeGroups = new Set(groups);
-    // minden group chip aktív
+    activeGroups = new Set(groups);          // minden aktív
+    filterMode = 'all';
     groupChips.forEach((chip) => chip.classList.remove('inactive'));
     draw();
   }, '#2c7'); // zöld
 
   addAdminChip('None', () => {
-    activeGroups.clear();
-    // minden group chip inaktív
+    activeGroups.clear();                    // üres halmaz
+    filterMode = 'none';                     // semmi sem látszik
     groupChips.forEach((chip) => chip.classList.add('inactive'));
     draw();
   }, '#c33'); // piros
@@ -198,6 +206,7 @@ function buildLegend() {
     chip.appendChild(sw);
     chip.appendChild(label);
     chip.addEventListener('click', () => {
+      filterMode = 'custom'; // innentől a halmaz irányít
       if (activeGroups.has(g)) {
         activeGroups.delete(g);
         chip.classList.add('inactive');
@@ -209,7 +218,7 @@ function buildLegend() {
     });
     legendEl.appendChild(chip);
     groupChips.set(g, chip);
-    // kezdetben minden aktív
+    // kezdetben minden aktív (és filterMode = 'all')
     activeGroups.add(g);
   });
 }
@@ -341,8 +350,7 @@ function draw() {
 
   events.forEach(ev => {
     const group = ev['Group'] || '';
-    // szűrés: ha van legenda és a group inaktív, ugorjuk
-    if (activeGroups.size && !activeGroups.has(group)) return;
+    if (!isGroupVisible(group)) return;  // <<< javított szűrés
 
     const col = getGroupColor(group);
 

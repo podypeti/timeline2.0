@@ -2,16 +2,16 @@
 // ===== Timeline config =====
 const MIN_YEAR = -5000;
 const MAX_YEAR = 2100;
-const INITIAL_CENTER_YEAR = 1;                 // ⬅️ center at 1 CE by default
-const MIN_ZOOM = 0.2;                          // px / év
-const MAX_ZOOM = 12000;                        // deeper zoom
+const INITIAL_CENTER_YEAR = 1;                 // center at 1 CE
+const MIN_ZOOM = 0.2;
+const MAX_ZOOM = 12000;
 const LABEL_ANCHOR_YEAR = -5000;
 const AVG_YEAR_DAYS = 365.2425;
 
 // --- Clustering config ---
-const CLUSTER_BY = 'pixel';    // 'pixel' | 'year'
+const CLUSTER_BY = 'pixel';
 function clusterPxThreshold() {
-  const ppy = scale; // pixels per year
+  const ppy = scale;
   if (ppy >= 800) return 6;
   if (ppy >= 200) return 10;
   if (ppy >= 60)  return 14;
@@ -29,19 +29,18 @@ const detailsPanel = document.getElementById('detailsPanel');
 const detailsClose = document.getElementById('detailsClose');
 const detailsContent = document.getElementById('detailsContent');
 
-// Pan slider DOM
 const panSlider = document.getElementById('panSlider');
 const panValue  = document.getElementById('panValue');
 
 // ===== State =====
 let dpr = Math.max(1, window.devicePixelRatio || 1);
-let W = 0, H = 0;               // canvas pixeles mérete (backing store)
-let scale = 1;                  // px / év
-let panX = 0;                   // vízszintes eltolás (px)
+let W = 0, H = 0;
+let scale = 1;
+let panX = 0;
 let isDragging = false;
 let dragStartX = 0;
-let events = [];                // CSV-ből betöltött események
-let drawHitRects = [];          // hit-test
+let events = [];
+let drawHitRects = [];
 let activeGroups = new Set();
 let groupColors = new Map();
 let groupChips = new Map();
@@ -59,7 +58,6 @@ function sizeCanvasToCss() {
 }
 
 function formatYearHuman(y) { return y < 0 ? `${Math.abs(y)} BCE` : `${y} CE`; }
-
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 function formatMonthYear(v) {
   const year = Math.floor(v);
@@ -68,7 +66,6 @@ function formatMonthYear(v) {
   const m = MONTHS[Math.max(0, Math.min(11, mIndex))];
   return year < 0 ? `${m} ${Math.abs(year)} BCE` : `${m} ${year} CE`;
 }
-
 function formatDay(v) {
   const year = Math.floor(v);
   const fracY = v - year;
@@ -80,7 +77,6 @@ function formatDay(v) {
   const labelMonth = MONTHS[Math.max(0, Math.min(11, monthIdx))];
   return `${labelYear} · ${labelMonth} ${dayIndex + 1}`;
 }
-
 function formatHour(v) {
   const year = Math.floor(v);
   const fracY = v - year;
@@ -95,32 +91,17 @@ function formatHour(v) {
   const hh = String(hour).padStart(2, '0');
   return `${labelYear} · ${labelMonth} ${dayIndex + 1}, ${hh}:00`;
 }
-
 function hashColor(str) { let h = 0; for (let i=0;i<str.length;i++) h=(h*31+str.charCodeAt(i))>>>0; return `hsl(${h%360},65%,45%)`; }
 function getGroupColor(group) { if(!group) return '#0077ff'; if(!groupColors.has(group)) groupColors.set(group, hashColor(group)); return groupColors.get(group); }
 function xForYear(yearFloat) { return (yearFloat - MIN_YEAR) * scale + panX; }
 function yearForX(x) { return MIN_YEAR + (x - panX) / scale; }
-
-function isGroupVisible(group) {
-  if (filterMode === 'all')  return true;
-  if (filterMode === 'none') return false;
-  return activeGroups.has(group);
-}
+function isGroupVisible(group) { if (filterMode === 'all')  return true; if (filterMode === 'none') return false; return activeGroups.has(group); }
 
 // Slider label
-function setPanValueLabel(y) {
-  const yr = Math.round(y);
-  panValue.textContent = yr < 0 ? `${Math.abs(yr)} BCE` : `${yr} CE`;
-}
+function setPanValueLabel(y) { const yr = Math.round(y); panValue.textContent = yr < 0 ? `${Math.abs(yr)} BCE` : `${yr} CE`; }
+function centerOnYear(y) { panX = (canvas.clientWidth / 2) - ((y - MIN_YEAR) * scale); draw(); }
 
-// Centering helper
-function centerOnYear(y) {
-  // Keep scale, change panX so that the canvas center maps to year y
-  panX = (canvas.clientWidth / 2) - ((y - MIN_YEAR) * scale);
-  draw();
-}
-
-// ===== Proleptic Gregorian → JDN =====
+// ===== JDN =====
 function gregorianToJDN(y, m, d) {
   const a = Math.floor((14 - m) / 12);
   const y2 = y + 4800 - a;
@@ -128,15 +109,7 @@ function gregorianToJDN(y, m, d) {
   return d + Math.floor((153 * m2 + 2) / 5) + 365 * y2 + Math.floor(y2 / 4)
        - Math.floor(y2 / 100) + Math.floor(y2 / 400) - 32045;
 }
-function parseTimeFraction(s) {
-  if (!s) return 0;
-  const m = String(s).match(/(\d{1,2}):(\d{2})(?::(\d{2}))?/);
-  if (!m) return 0;
-  const h  = Math.min(23, Math.max(0, parseInt(m[1],10)));
-  const mi = Math.min(59, Math.max(0, parseInt(m[2],10)));
-  const se = m[3] ? Math.min(59, Math.max(0, parseInt(m[3],10))) : 0;
-  return h/24 + mi/1440 + se/86400;
-}
+function parseTimeFraction(s) { if (!s) return 0; const m = String(s).match(/(\d{1,2}):(\d{2})(?::(\d{2}))?/); if (!m) return 0; const h=Math.min(23,Math.max(0,parseInt(m[1],10))); const mi=Math.min(59,Math.max(0,parseInt(m[2],10))); const se=m[3]?Math.min(59,Math.max(0,parseInt(m[3],10))):0; return h/24 + mi/1440 + se/86400; }
 function dateToYearFloat(year, month=1, day=1, timeStr='') {
   if (!Number.isFinite(year)) return NaN;
   const m = Number.isFinite(month) ? Math.max(1, Math.min(12, month)) : 1;
@@ -149,42 +122,53 @@ function dateToYearFloat(year, month=1, day=1, timeStr='') {
   return MIN_YEAR + (daysFromAnchor / AVG_YEAR_DAYS);
 }
 
-// ===== Rounded-rect fallback =====
-function roundedRectPath(x, y, w, h, r) {
-  const p = new Path2D();
-  const rr = Math.max(0, Math.min(r, Math.min(w, h) / 2));
-  p.moveTo(x + rr, y);
-  p.lineTo(x + w - rr, y);
-  p.quadraticCurveTo(x + w, y, x + w, y + rr);
-  p.lineTo(x + w, y + h - rr);
-  p.quadraticCurveTo(x + w, y + h, x + w - rr, y + h);
-  p.lineTo(x + rr, y + h);
-  p.quadraticCurveTo(x, y + h, x, y + h - rr);
-  p.lineTo(x, y + rr);
-  p.quadraticCurveTo(x, y, x + rr, y);
-  return p;
-}
+// ===== Rounded-rect (Path2D full fallback) =====
 function fillStrokeRoundedRect(x, y, w, h, r, fillStyle, strokeStyle) {
-  const path = (Path2D.prototype.roundRect)
-    ? (() => { const p = new Path2D(); p.roundRect(x, y, w, h, r); return p; })()
-    : roundedRectPath(x, y, w, h, r);
-  if (fillStyle) { ctx.fillStyle = fillStyle; ctx.fill(path); }
-  if (strokeStyle) { ctx.strokeStyle = strokeStyle; ctx.stroke(path); }
+  const hasPath2D = (typeof Path2D === 'function');
+  if (hasPath2D && Path2D.prototype.roundRect) {
+    const p = new Path2D(); p.roundRect(x, y, w, h, r);
+    if (fillStyle) { ctx.fillStyle = fillStyle; ctx.fill(p); }
+    if (strokeStyle) { ctx.strokeStyle = strokeStyle; ctx.stroke(p); }
+  } else if (hasPath2D) {
+    const p = new Path2D();
+    const rr = Math.max(0, Math.min(r, Math.min(w, h) / 2));
+    p.moveTo(x + rr, y);
+    p.lineTo(x + w - rr, y);
+    p.quadraticCurveTo(x + w, y, x + w, y + rr);
+    p.lineTo(x + w, y + h - rr);
+    p.quadraticCurveTo(x + w, y + h, x + w - rr, y + h);
+    p.lineTo(x + rr, y + h);
+    p.quadraticCurveTo(x, y + h, x, y + h - rr);
+    p.lineTo(x, y + rr);
+    p.quadraticCurveTo(x, y, x + rr, y);
+    if (fillStyle) { ctx.fillStyle = fillStyle; ctx.fill(p); }
+    if (strokeStyle) { ctx.strokeStyle = strokeStyle; ctx.stroke(p); }
+  } else {
+    // No Path2D at all → draw directly
+    const rr = Math.max(0, Math.min(r, Math.min(w, h) / 2));
+    ctx.beginPath();
+    ctx.moveTo(x + rr, y);
+    ctx.lineTo(x + w - rr, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + rr);
+    ctx.lineTo(x + w, y + h - rr);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - rr, y + h);
+    ctx.lineTo(x + rr, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - rr);
+    ctx.lineTo(x, y + rr);
+    ctx.quadraticCurveTo(x, y, x + rr, y);
+    if (fillStyle) { ctx.fillStyle = fillStyle; ctx.fill(); }
+    if (strokeStyle) { ctx.strokeStyle = strokeStyle; ctx.stroke(); }
+  }
 }
 
-// ===== CSV parsing =====
-async function loadCsv(url) {
-  const res = await fetch(url);
-  const text = await res.text();
-  return parseCSV(text);
-}
+// ===== CSV =====
+async function loadCsv(url) { const res = await fetch(url); const text = await res.text(); return parseCSV(text); }
 function parseCSV(text) {
   const lines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
   const header = splitCsvLine(lines[0]);
   const rows = [];
   for (let i = 1; i < lines.length; i++) {
-    const line = lines[i];
-    if (!line.trim()) continue;
+    const line = lines[i]; if (!line.trim()) continue;
     const cols = splitCsvLine(line);
     const obj = {};
     for (let j = 0; j < header.length; j++) {
@@ -200,17 +184,15 @@ function splitCsvLine(line) {
   const result = []; let cur = ''; let inQuotes = false;
   for (let i = 0; i < line.length; i++) {
     const ch = line[i];
-    if (ch === '"') {
-      if (inQuotes && line[i + 1] === '"') { cur += '"'; i++; }
-      else inQuotes = !inQuotes;
-    } else if (ch === ',' && !inQuotes) { result.push(cur); cur = ''; }
+    if (ch === '"') { if (inQuotes && line[i + 1] === '"') { cur += '"'; i++; } else inQuotes = !inQuotes; }
+    else if (ch === ',' && !inQuotes) { result.push(cur); cur = ''; }
     else { cur += ch; }
   }
   result.push(cur);
   return result;
 }
 
-// ===== Legend (Groups) + All/None =====
+// ===== Legend =====
 function buildLegend() {
   const groups = [...new Set(events.map(e => e['Group']).filter(Boolean))].sort();
   legendEl.innerHTML = ''; groupChips.clear();
@@ -253,7 +235,7 @@ function buildLegend() {
   });
 }
 
-// ===== Details panel =====
+// ===== Details =====
 function showDetails(ev) {
   const baseYear = parseInt(ev['Year'], 10);
   const displayDate = ev['Display Date'] || (Number.isFinite(baseYear) ? formatYearHuman(baseYear) : '');
@@ -265,7 +247,7 @@ function showDetails(ev) {
   detailsContent.innerHTML = `
     <h3>${escapeHtml(headline)}</h3>
     <div class="meta">${escapeHtml(displayDate)}${ev['Type'] ? ' • ' + escapeHtml(ev['Type']) : ''}${ev['Group'] ? ' • ' + escapeHtml(ev['Group']) : ''}</div>
-    ${media ? `<div class="media"><img src="${(media)}</div>` : ''}
+    ${media ? `<div class="media"><img src="${escapeAttr(media)}''}
     ${caption ? `<p><em>${escapeHtml(caption)}</em></p>` : ''}
     ${text ? `<p>${text}</p>` : ''}
     ${credit ? `<p class="meta">${escapeHtml(credit)}</p>` : ''}
@@ -300,7 +282,7 @@ detailsClose.addEventListener('click', hideDetails);
 function escapeHtml(s){ return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 function escapeAttr(s){ return escapeHtml(s).replace(/'/g,'&#39;'); }
 
-// ===== Tick scale =====
+// ===== Ticks =====
 function chooseTickScale(pxPerYear) {
   if (pxPerYear >= 8000) {
     const hour = 1 / (AVG_YEAR_DAYS * 24);
@@ -320,20 +302,15 @@ function chooseTickScale(pxPerYear) {
   return { majorStep: 1000, format: formatYearHuman, minor: { step: 100, len: 8 } };
 }
 
-// ===== Dynamic label layout helpers =====
+// ===== Label layout helpers =====
 function rowsForScale() { if (scale >= 800) return 4; if (scale >= 200) return 3; return 2; }
 function gapForScale()  { if (scale >= 200) return 8; return 12; }
 function maxLabelWidthForScale() { if (scale >= 800) return 320; if (scale >= 200) return 240; return 180; }
 function shortenToFit(text, maxWidth) {
-  let t = text;
-  if (!t) return '';
+  let t = text; if (!t) return '';
   if (ctx.measureText(t).width <= maxWidth) return t;
   let lo = 0, hi = t.length;
-  while (lo < hi) {
-    const mid = ((lo + hi) >> 1);
-    const cand = t.slice(0, mid) + '…';
-    if (ctx.measureText(cand).width <= maxWidth) lo = mid + 1; else hi = mid;
-  }
+  while (lo < hi) { const mid = ((lo + hi) >> 1); const cand = t.slice(0, mid) + '…'; if (ctx.measureText(cand).width <= maxWidth) lo = mid + 1; else hi = mid; }
   return t.slice(0, Math.max(1, lo - 1)) + '…';
 }
 function layoutSingleLabels(singleClusters, options = {}) {
@@ -375,10 +352,7 @@ function layoutSingleLabels(singleClusters, options = {}) {
     const y = yBase + ri * dy;
     row.items.forEach(it => {
       ctx.fillText(it.text, it.x + 8, y);
-      if (showLeader) {
-        ctx.strokeStyle = '#00000022';
-        ctx.beginPath(); ctx.moveTo(it.x, it.dotY + 5); ctx.lineTo(it.x + 6, y); ctx.stroke();
-      }
+      if (showLeader) { ctx.strokeStyle = '#00000022'; ctx.beginPath(); ctx.moveTo(it.x, it.dotY + 5); ctx.lineTo(it.x + 6, y); ctx.stroke(); }
     });
   });
 }
@@ -393,10 +367,9 @@ function draw() {
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, W, H);
 
-  // skála és tickek
+  // skála
   ctx.save();
   ctx.font = '14px sans-serif';
-
   const { majorStep, format, minor } = chooseTickScale(scale);
 
   if (minor && minor.step) {
@@ -433,23 +406,20 @@ function draw() {
   }
   ctx.restore();
 
-  // középvonal + közép-év felirat
+  // középvonal + közép-év felirat + slider sync
   ctx.strokeStyle = '#00000033';
   ctx.beginPath(); ctx.moveTo(W / dpr / 2, 0); ctx.lineTo(W / dpr / 2, H / dpr); ctx.stroke();
   const centerYear = yearForX(canvas.clientWidth / 2);
-
-  // update bottom slider & label (sync)
   panSlider.value = Math.round(centerYear);
   setPanValueLabel(centerYear);
-
   ctx.fillStyle = '#00000066'; ctx.font = '12px sans-serif'; ctx.textBaseline = 'bottom';
   ctx.fillText(formatYearHuman(Math.round(centerYear)), (W / dpr / 2) + 6, H / dpr - 6);
 
-  // esemény-sáv Y pozíciók
+  // sorok Y
   const rowYPoint = 110;
   const rowYBar   = 180;
 
-  // 1) compute visible points
+  // látható pontok
   const visiblePoints = [];
   events.forEach(ev => {
     const group = ev['Group'] || '';
@@ -502,7 +472,7 @@ function draw() {
     }
   });
 
-  // 2) clustering
+  // klaszterezés
   visiblePoints.sort((a,b) => a.x - b.x);
   const clusters = [];
   let current = null;
@@ -513,7 +483,7 @@ function draw() {
       current = { events:[p.ev], xs:[p.x], y:p.yLabel, groups:new Set([p.group]), colors:[p.color], centerX:p.x, centerYear:p.yearFloat };
       continue;
     }
-    const effPx = (scale >= 400 ? 0 : clusterPxThreshold());  // no clustering ≥ 400 px/year
+    const effPx = (scale >= 400 ? 0 : clusterPxThreshold());
     const sameBucket =
       (CLUSTER_BY === 'pixel') ? (Math.abs(p.x - current.centerX) <= effPx)
                                : (p.yearKey === Math.round(current.centerYear));
@@ -538,15 +508,13 @@ function draw() {
   }
   pushCurrent();
 
-  // 3) draw clusters
+  // rajz
   ctx.textBaseline = 'top';
   ctx.font = '14px sans-serif';
-
   clusters.forEach(cluster => {
     const n = cluster.events.length;
     const x = cluster.centerX;
     const y = cluster.y;
-
     if (n === 1) {
       const ev = cluster.events[0];
       const group = ev['Group'] || '';
@@ -565,32 +533,22 @@ function draw() {
     }
   });
 
-  // 4) multi-row labels for singles
+  // több soros címkék a single pontokhoz
   const singles = clusters.filter(c => c.events.length === 1);
-  layoutSingleLabels(singles, {
-    gap: gapForScale(),
-    rows: rowsForScale(),
-    y: 118,
-    dy: 18,
-    maxW: maxLabelWidthForScale(),
-    leader: true
-  });
+  layoutSingleLabels(singles, { gap: gapForScale(), rows: rowsForScale(), y: 118, dy: 18, maxW: maxLabelWidthForScale(), leader: true });
 }
 
-// ===== Initialization =====
+// ===== Init =====
 function initScaleAndPan() {
   sizeCanvasToCss();
   scale = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, canvas.clientWidth / (MAX_YEAR - MIN_YEAR)));
-  // center on INITIAL_CENTER_YEAR (1 CE)
   panX = (canvas.clientWidth / 2) - ((INITIAL_CENTER_YEAR - MIN_YEAR) * scale);
-  // set slider initial value/label
   panSlider.min = String(MIN_YEAR);
   panSlider.max = String(MAX_YEAR);
   panSlider.step = "1";
   panSlider.value = String(INITIAL_CENTER_YEAR);
   setPanValueLabel(INITIAL_CENTER_YEAR);
 }
-
 async function init() {
   anchorJD = gregorianToJDN(MIN_YEAR, 1, 1);
   initScaleAndPan();
@@ -601,7 +559,7 @@ async function init() {
 }
 init();
 
-// ===== Zoom controls =====
+// ===== Zoom / Pan =====
 function zoomTo(newScale, anchorX = canvas.clientWidth / 2) {
   const anchorYear = yearForX(anchorX);
   const clamped = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, newScale));
@@ -615,7 +573,6 @@ btnZoomIn.addEventListener('click', () => zoomIn(canvas.clientWidth / 2));
 btnZoomOut.addEventListener('click', () => zoomOut(canvas.clientWidth / 2));
 btnReset.addEventListener('click', () => { initScaleAndPan(); draw(); });
 
-// Mouse wheel zoom
 canvas.addEventListener('wheel', (e) => {
   e.preventDefault();
   const anchor = (e.offsetX ?? (e.clientX - canvas.getBoundingClientRect().left));
@@ -623,26 +580,16 @@ canvas.addEventListener('wheel', (e) => {
   zoomTo(scale * zoomFactor, anchor);
 }, { passive: false });
 
-// ===== Drag-to-pan =====
 canvas.addEventListener('mousedown', (e) => { isDragging = true; dragStartX = e.clientX; });
-window.addEventListener('mousemove', (e) => {
-  if (isDragging) { panX += (e.clientX - dragStartX); dragStartX = e.clientX; draw(); }
-});
+window.addEventListener('mousemove', (e) => { if (isDragging) { panX += (e.clientX - dragStartX); dragStartX = e.clientX; draw(); } });
 window.addEventListener('mouseup', () => { isDragging = false; });
 canvas.addEventListener('mouseleave', () => { isDragging = false; });
 
-// Touch – single finger pan
-canvas.addEventListener('touchstart', (e) => {
-  if (e.touches.length === 1) { isDragging = true; dragStartX = e.touches[0].clientX; }
-}, { passive: true });
-canvas.addEventListener('touchmove', (e) => {
-  if (isDragging && e.touches.length === 1) {
-    panX += (e.touches[0].clientX - dragStartX); dragStartX = e.touches[0].clientX; draw();
-  }
-}, { passive: true });
-canvas.addEventListener('touchend', () => { isDragging = false; });
+canvas.addEventListener('touchstart', (e) => { if (e.touches.length === 1) { isDragging = true; dragStartX = e.touches[0].clientX; } }, { passive: true });
+canvas.addEventListener('touchmove',  (e) => { if (isDragging && e.touches.length === 1) { panX += (e.touches[0].clientX - dragStartX); dragStartX = e.touches[0].clientX; draw(); } }, { passive: true });
+canvas.addEventListener('touchend',   () => { isDragging = false; });
 
-// ===== Pan slider listeners =====
+// Slider → center
 panSlider.addEventListener('input', () => {
   const targetYear = parseFloat(panSlider.value);
   setPanValueLabel(targetYear);
@@ -665,5 +612,5 @@ canvas.addEventListener('click', (e) => {
   }
 });
 
-// ===== Responsive redraw =====
+// ===== Responsive =====
 window.addEventListener('resize', () => { draw(); });

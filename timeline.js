@@ -677,7 +677,7 @@ async function init() {
   anchorJD = gregorianToJDN(MIN_YEAR, 1, 1);
   initScaleAndPan();
   try {
-    events = await loadCsv('timeline-data.csv?v=12');
+    events = await loadCsv('timeline-data.csv?v=v');
   } catch (e) {
     console.error('CSV betöltési hiba:', e);
     events = [];

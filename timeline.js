@@ -1,5 +1,8 @@
 
-// ===== Timeline config =====
+// ===== Version & config =====
+console.log('[timeline] script loaded v6');
+
+const ASSET_VERSION = '6';
 const MIN_YEAR = -5000;
 const MAX_YEAR = 2100;
 const INITIAL_CENTER_YEAR = 1; // center at 1 CE
@@ -474,6 +477,7 @@ function layoutSingleLabels(singleClusters, options = {}) {
 // ===== Main draw =====
 function draw() {
   sizeCanvasToCss();
+  console.log('[timeline] draw()', { W, H, scale, panX });
   ctx.clearRect(0, 0, W, H);
   drawHitRects = [];
 
@@ -676,8 +680,13 @@ function initScaleAndPan() {
 async function init() {
   anchorJD = gregorianToJDN(MIN_YEAR, 1, 1);
   initScaleAndPan();
+
+  // Draw baseline axes & center line immediately (so you see something even before data loads)
+  draw();
+
   try {
-    events = await loadCsv('timeline-data.csv?v=v');
+    events = await loadCsv(`./timeline-data.csv?v=${ASSET_VERSION}`);
+    console.log('[timeline] events loaded:', events.length);
   } catch (e) {
     console.error('CSV betöltési hiba:', e);
     events = [];

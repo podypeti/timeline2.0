@@ -4,39 +4,51 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>History Timeline - inline test</title>
+  <title>History Timeline</title>
+
+  <!-- Külső CSS -->
+  ./style.css?v=7
+
+  <!-- Opcionális: CSV prefetch -->
+  ./timeline-data.csv
+
   <style>
-    body { margin:0; font-family: Arial, sans-serif; background:#f7f7f7; }
+    html,body { height: 100%; }
+    body { margin:0; background:#f7f7f7; font-family: Arial, sans-serif; color:#000; }
     #timelineCanvas { width:100%; height:560px; display:block; background:#fff; }
-    .bar { position:fixed; left:0; right:0; bottom:0; padding:8px 12px; background:#fff8; border-top:1px solid #ddd; }
   </style>
 </head>
 <body>
-  <canvas id="timelineCanvas" width="800" height="600"></canvas>
-  <div class="bar">Inline test running…</div>
+  <div class="legendControls">
+    <div class="inner">
+      <span class="legendTitle">Legend</span>
+      <div id="legend" class="legend"></div>
+      <div class="spacer"></div>
+      <button id="zoomOut" class="ghost" aria-label="Zoom out">−</button>
+      <button id="zoomIn"  class="ghost" aria-label="Zoom in">+</button>
+      <button id="resetZoom" class="ghost" aria-label="Reset zoom and center">Reset</button>
+    </div>
+  </div>
 
-  <script>
-    // PROBE: ha ezt látod a Console-ban, az inline JS fut
-    console.log('[probe] inline script executed');
+  <div id="timelineContainer">
+    <canvas id="timelineCanvas" width="800" height="600"></canvas>
+  </div>
 
-    // PROBERAJZ a vászonra: piros vonal
-    const cv = document.getElementById('timelineCanvas');
-    const cx = cv.getContext('2d');
-    cx.strokeStyle = '#e00';
-    cx.lineWidth = 3;
-    cx.beginPath();
-    cx.moveTo(20, 20);
-    cx.lineTo(500, 20);
-    cx.stroke();
+  <div id="detailsPanel" class="details hidden" role="dialog" aria-modal="true">
+    <button id="detailsClose" class="close" aria-label="Close">×</button>
+    <div id="detailsContent"></div>
+  </div>
 
-    // Középső függőleges vonal
-    cx.strokeStyle = '#999';
-    cx.beginPath();
-    cx.moveTo(cv.width/2, 0);
-    cx.lineTo(cv.width/2, cv.height);
-    cx.stroke();
+  <div class="panSliderBar" aria-label="Timeline pan control">
+    <span class="panLabel">Center:</span>
+    <input id="panSlider" type="range" min="-5000" max="2100" step="1" value="1" aria-label="Center year (BCE/CE)">
+    <span id="panValue" class="panValue">1 CE</span>
+  </div>
 
-    // Ha ez látszik, a canvas méret és a rajzolás rendben van.
-  </script>
+  <!-- Inline probe -->
+  <script>console.log('[probe] inline script executed');</script>
+
+  <!-- Külső JS — VALÓDI SCRIPT TAG -->
+  ./timeline.js?v=7</script>
 </body>
 </html>

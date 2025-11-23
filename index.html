@@ -7,49 +7,16 @@
   <title>History Timeline</title>
 
   <!-- External CSS -->
-  ./style.css
+  ./style.css?v=6
 
-  <!-- (Optional) Use prefetch, not preload, to avoid DevTools warning -->
+  <!-- Optional: prefetch CSV (no strict timing expectation like preload) -->
   ./timeline-data.csv
 
-  <!-- Inline fallback CSS -->
+  <!-- Minimal inline fallback just to guarantee a visible canvas -->
   <style>
-    :root { --bg:#f7f7f7; --ink:#000; --chip:#fff; --chip-b:#0001; --shadow:#0003; --accent:#222; }
-    html, body { height:100%; }
-    body { margin: 0; background: var(--bg); font-family: Arial, sans-serif; color: var(--ink); }
-    #timelineContainer { width: 100%; overflow: hidden; position: relative; }
+    html,body { height: 100%; }
+    body { margin: 0; background: #f7f7f7; font-family: Arial, sans-serif; color: #000; }
     #timelineCanvas { width: 100%; height: 560px; display: block; }
-    .legendControls { max-width: 1100px; margin: 4px auto 2px; padding: 0 10px; }
-    .legendControls .inner { display: flex; align-items: center; gap: 10px; }
-    .legendControls .legendTitle { display: none; }
-    .legendControls .spacer { flex: 1; }
-    .legendControls button.ghost {
-      padding: 6px 12px; font-size: .9rem; border: 1px solid #0002; background: #fff; color:#111;
-      border-radius: 8px; cursor: pointer; box-shadow: 0 1px 2px var(--shadow);
-    }
-    .legendControls button.ghost:hover { background:#f3f3f3; }
-    .legend { display: flex; flex-wrap: nowrap; overflow-x: auto; gap: 8px; padding: 0 10px; font-size: 0.9rem; }
-    .legend .chip { display: inline-flex; align-items: center; gap: 6px; background: var(--chip); border: 1px solid var(--chip-b); border-radius: 16px; padding: 4px 10px; box-shadow: 0 1px 2px var(--shadow); cursor: pointer; user-select: none; }
-    .legend .swatch { width: 12px; height: 12px; border-radius: 50%; border: 1px solid #0003; }
-    .legend .chip.inactive { opacity: .45; filter: grayscale(.2) saturate(.8); text-decoration: line-through; }
-    .details {
-      position: fixed; right: 12px; top: 70px; width: min(360px, 92vw); max-height: calc(100vh - 100px);
-      overflow: auto; background: #fff; border: 1px solid #0001; border-radius: 10px;
-      box-shadow: 0 10px 24px var(--shadow); padding: 14px 16px 18px; z-index: 20;
-    }
-    .details.hidden { display: none; }
-    .details .close { position: absolute; top: 6px; right: 8px; width: 28px; height: 28px; border: none; border-radius: 50%; background: #f2f2f2; cursor: pointer; font-size: 18px; line-height: 28px; }
-    .details h3 { margin: 4px 0 8px; font-size: 1.05rem; }
-    .details .meta { color: #555; font-size: 0.9rem; margin-bottom: 10px; }
-    .details .media img { width: 100%; height: auto; border-radius: 8px; box-shadow: 0 2px 8px #0002; }
-
-    .panSliderBar {
-      position: fixed; left: 0; right: 0; bottom: 0; padding: 10px 16px; background: rgba(255,255,255,.92);
-      border-top: 1px solid #0002; box-shadow: 0 -6px 18px var(--shadow); display: flex; align-items: center; gap: 12px; z-index: 15;
-    }
-    .panSliderBar .panLabel { font-size: .9rem; color: #333; }
-    #panSlider { flex: 1; height: 24px; }
-    .panValue { min-width: 80px; text-align: right; font-weight: 600; color: #111; }
   </style>
 </head>
 <body>
@@ -90,8 +57,9 @@
     <span id="panValue" class="panValue">1 CE</span>
   </div>
 
-  <!-- Script -->
+  <!-- Scripts -->
   <noscript>This page requires JavaScript to render the timeline.</noscript>
-  ./timeline.js?v=4</script>
+  <!-- Defer ensures the DOM is parsed before the script runs; v=6 busts CDN/browser cache -->
+  ./timeline.js?v=6</script>
 </body>
 </html>

@@ -392,57 +392,77 @@ detailsClose.addEventListener('click', hideDetails);
 
 // ===== Ticks =====
 function chooseTickScale(pxPerYear) {
-  // Candidate scales ordered from fine → coarse
-  const candidates = [
-    { majorStep: 1 / (AVG_YEAR_DAYS * 24), format: v => formatHour(v) },   // hour
-    { majorStep: 1 / AVG_YEAR_DAYS,       format: v => formatDay(v) },    // day
+  // Base time units (finest → coarse)
+  const baseUnits = [
+    { majorStep: 1 / (AVG_YEAR_DAYS * 24), format: v => formatHour(v) },  // hour
+    { majorStep: 1 / AVG_YEAR_DAYS,       format: v => formatDay(v) },   // day
     { majorStep: 1 / 12,                  format: v => formatMonthYear(v) }, // month
     { majorStep: 1,                       format: v => formatYearHuman(Math.round(v)) }, // year
-    { majorStep: 10,                      format: formatYearHuman },      // decade
-    { majorStep: 100,                     format: formatYearHuman },      // century
-    { majorStep: 1000,                    format: formatYearHuman },      // millennia
   ];
 
-  const MIN_GAP = 10; // minimum padding between labels
+  // Dynamically generate “plural” steps (nice numbers):
+  // 1, 2, 5 × 10^k
+  const niceSteps = [];
+  const bases = [1, 2, 5];
 
-  // Use canvas font to measure label width precisely
-  ctx.font = '14px sans-serif';
+  for (let exp = 0; exp <= 5; exp++) {
+    for (const b of bases) {
+      niceSteps.push(b * Math.pow(10, exp));   // e.g. 1, 2, 5, 10, 20, 50, 100, ...
+    }
+  }
 
-  // We measure using 5 sample ticks across the visible range
+  // Convert nice numbers into step candidates (years)
+  const yearSteps = niceSteps.map(n => ({
+    majorStep: n,
+    format: formatYearHuman
+  }));
+
+  // Combine fine→coarse units
+  const candidates = [...baseUnits, ...yearSteps];
+
+  // Minimum pill gap
+  const MIN_GAP = 6;
+
+  // Sample positions across screen
   const sampleX = [
-    canvas.clientWidth * 0.05,
-    canvas.clientWidth * 0.25,
-    canvas.clientWidth * 0.5,
+    canvas.clientWidth * 0.15,
+    canvas.clientWidth * 0.35,
+    canvas.clientWidth * 0.55,
     canvas.clientWidth * 0.75,
-    canvas.clientWidth * 0.95,
   ];
+
+  ctx.font = '14px sans-serif';
 
   for (const c of candidates) {
     const stepPx = c.majorStep * pxPerYear;
     if (stepPx <= 0) continue;
 
-    // Estimate worst-case label width dynamically
-    let maxLabelW = 0;
+    const widths = [];
 
+    // Measure label widths for sample ticks
     for (const sx of sampleX) {
-      const yearHere = yearForX(sx);
-      const snapped = Math.round(yearHere / c.majorStep) * c.majorStep;
+      const yr = yearForX(sx);
+      const snapped = Math.round(yr / c.majorStep) * c.majorStep;
       const text = c.format(snapped);
-      const w = ctx.measureText(text).width + 12; // pill padding
-      if (w > maxLabelW) maxLabelW = w;
+      const w = ctx.measureText(text).width + 10; // pill padding
+      widths.push(w);
     }
 
-    // Check if labels fit with gap
-    if (stepPx >= maxLabelW + MIN_GAP) {
+    // Use **median width** to avoid rejecting good scales
+    widths.sort((a, b) => a - b);
+    const medianW = widths[Math.floor(widths.length / 2)];
+
+    // Relaxed spacing: if the majority of labels fit, accept this scale
+    if (stepPx >= medianW + MIN_GAP) {
       return {
         majorStep: c.majorStep,
         format: c.format,
-        minor: null
+        minor: null,
       };
     }
   }
 
-  // fallback → coarsest
+  // fallback
   const last = candidates[candidates.length - 1];
   return {
     majorStep: last.majorStep,

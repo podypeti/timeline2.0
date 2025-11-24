@@ -41,10 +41,7 @@ let isDragging = false;
 let dragStartX = 0;
 let events = [];
 let drawHitRects = [];
-let activeGroups = new Set();
 let groupColors = new Map();
-let groupChips = new Map();
-let filterMode = 'all';
 let anchorJD = null;
 
 // ===== Utils =====

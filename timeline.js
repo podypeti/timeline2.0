@@ -392,59 +392,44 @@ detailsClose.addEventListener('click', hideDetails);
 
 // ===== Ticks =====
 function chooseTickScale(pxPerYear) {
-  // Smooth labeling steps
-  if (pxPerYear >= 4000) {
-    // Days
-    const day = 1 / AVG_YEAR_DAYS;
-    return {
-      majorStep: day,
-      format: v => formatDay(v),
-      minor: { step: day / 6, len: 10, faint: true }
-    };
+  // List of possible tick units (from fine → coarse)
+  // Each unit has:
+  //  majorStep: numeric years
+  //  label: formatting function
+  //  estLabelWidth: typical label width in pixels
+  const candidates = [
+    { majorStep: 1/365.2425, label: v => formatHour(v), estLabelWidth: 120 },    // hours
+    { majorStep: 1/365.2425/6, label: v => formatDay(v), estLabelWidth: 110 },   // days
+    { majorStep: 1/12, label: v => formatMonthYear(v), estLabelWidth: 90 },      // months
+    { majorStep: 1, label: v => formatYearHuman(Math.round(v)), estLabelWidth: 60 }, // years
+    { majorStep: 10, label: formatYearHuman, estLabelWidth: 65 },                // decades
+    { majorStep: 100, label: formatYearHuman, estLabelWidth: 70 },               // centuries
+    { majorStep: 1000, label: formatYearHuman, estLabelWidth: 80 },              // millennia
+  ];
+
+  // Minimum required gap between tick label pills
+  const MIN_GAP = 12;
+
+  // Try candidates from finest to coarsest
+  for (const c of candidates) {
+    const stepPx = c.majorStep * pxPerYear;
+    const requiredWidth = c.estLabelWidth + MIN_GAP;
+
+    if (stepPx >= requiredWidth) {
+      return {
+        majorStep: c.majorStep,
+        format: c.label,
+        minor: null,
+      };
+    }
   }
 
-  if (pxPerYear >= 1800) {
-    // Months
-    const month = 1 / 12;
-    return {
-      majorStep: month,
-      format: v => formatMonthYear(v),
-      minor: { step: month / 4, len: 12, faint: true }
-    };
-  }
-
-  if (pxPerYear >= 450) {
-    // Years
-    return {
-      majorStep: 1,
-      format: v => formatYearHuman(Math.round(v)),
-      minor: { step: 1 / 12, len: 12 }
-    };
-  }
-
-  if (pxPerYear >= 120) {
-    // Decades
-    return {
-      majorStep: 10,
-      format: formatYearHuman,
-      minor: { step: 1, len: 10 }
-    };
-  }
-
-  if (pxPerYear >= 15) {
-    // Centuries
-    return {
-      majorStep: 100,
-      format: formatYearHuman,
-      minor: { step: 10, len: 8 }
-    };
-  }
-
-  // Default far zoom: millennia
+  // Fallback: extremely zoomed out → millennia
+  const last = candidates[candidates.length - 1];
   return {
-    majorStep: 1000,
-    format: formatYearHuman,
-    minor: { step: 100, len: 8 }
+    majorStep: last.majorStep,
+    format: last.label,
+    minor: null,
   };
 }
 // ===== Label layout helpers =====

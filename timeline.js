@@ -302,33 +302,13 @@ function getGroupColor(group) {
 }
 
 
-
 function buildLegend() {
-  // Extract unique categories from CSV
   const groups = [...new Set(events.map(e => e['Group']).filter(Boolean))].sort();
 
   legendEl.innerHTML = '';
   groupChips.clear();
 
   // Admin chips
-  const addAdminChip = (label, onClick, color = '#444') => {
-    const chip = document.createElement('div');
-    chip.className = 'chip';
-    chip.dataset.admin = label;
-
-    const sw = document.createElement('span');
-    sw.className = 'swatch';
-    sw.style.background = color;
-
-    const text = document.createElement('span');
-    text.textContent = label;
-
-    chip.appendChild(sw);
-    chip.appendChild(text);
-    chip.addEventListener('click', onClick);
-    legendEl.appendChild(chip);
-  };
-
   addAdminChip('All', () => {
     activeGroups = new Set(groups);
     filterMode = 'all';
@@ -343,7 +323,7 @@ function buildLegend() {
     draw();
   }, '#c33');
 
-  // Build chips dynamically from CSV groups
+  // Group chips
   groups.forEach(g => {
     const chip = document.createElement('div');
     chip.className = 'chip';
@@ -381,6 +361,7 @@ function buildLegend() {
     activeGroups.add(g);
   });
 }
+
 
 
 // Search filter

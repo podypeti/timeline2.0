@@ -272,43 +272,60 @@ function parseCSV(text) {
 
 // ===== Legend =====
 
+const legendEl = document.getElementById('legend');
+const groupChips = new Map();
+let activeGroups = new Set();
+let filterMode = 'all';
+
+// Example categories
+const groups = ['History', 'War', 'Religion', 'Science', 'Art'];
+
+function getGroupIcon(group) {
+  const iconMap = {
+    'History': '📜',
+    'War': '⚔️',
+    'Religion': '⛪',
+    'Science': '🔬',
+    'Art': '🎨'
+  };
+  return iconMap[group] || '📌';
+}
+
+function getGroupColor(group) {
+  const colorMap = {
+    'History': '#f4c542',
+    'War': '#d9534f',
+    'Religion': '#5bc0de',
+    'Science': '#5cb85c',
+    'Art': '#f0ad4e'
+  };
+  return colorMap[group] || '#999';
+}
+
 function buildLegend() {
-  const groups = [...new Set(events.map(e => e['Group']).filter(Boolean))].sort();
   legendEl.innerHTML = '';
   groupChips.clear();
 
-  // Admin chips
-  const addAdminChip = (label, onClick, color = '#444') => {
-    const chip = document.createElement('div');
-    chip.className = 'chip';
-    chip.dataset.admin = label;
-    chip.style.background = color;
-    chip.textContent = label;
-    chip.addEventListener('click', onClick);
-    legendEl.appendChild(chip);
-  };
-
-  addAdminChip('All', () => {
-    activeGroups = new Set(groups);
-    filterMode = 'all';
-    groupChips.forEach(chip => chip.classList.remove('inactive'));
-    draw();
-  }, '#2c7');
-
-  addAdminChip('None', () => {
-    activeGroups.clear();
-    filterMode = 'none';
-    groupChips.forEach(chip => chip.classList.add('inactive'));
-    draw();
-  }, '#c33');
-
-  // Group chips
   groups.forEach(g => {
     const chip = document.createElement('div');
     chip.className = 'chip';
     chip.dataset.group = g;
-    chip.style.background = getGroupColor(g);
-    chip.textContent = g;
+
+    const sw = document.createElement('span');
+    sw.className = 'swatch';
+    sw.style.background = getGroupColor(g);
+
+    const icon = document.createElement('span');
+    icon.className = 'chip-icon';
+    icon.textContent = getGroupIcon(g);
+
+    const label = document.createElement('span');
+    label.textContent = g;
+
+    chip.appendChild(sw);
+    chip.appendChild(icon);
+    chip.appendChild(label);
+
     chip.addEventListener('click', () => {
       filterMode = 'custom';
       if (activeGroups.has(g)) {
@@ -318,13 +335,38 @@ function buildLegend() {
         activeGroups.add(g);
         chip.classList.remove('inactive');
       }
-      draw();
+      console.log('Active groups:', [...activeGroups]);
     });
+
     legendEl.appendChild(chip);
     groupChips.set(g, chip);
     activeGroups.add(g);
   });
 }
+
+buildLegend();
+
+// Search filter
+document.getElementById('legendSearch').addEventListener('input', e => {
+  const term = e.target.value.toLowerCase();
+  groupChips.forEach((chip, group) => {
+    chip.style.display = group.toLowerCase().includes(term) ? 'inline-flex' : 'none';
+  });
+});
+
+// Admin chips
+document.querySelector('[data-admin="all"]').addEventListener('click', () => {
+  activeGroups = new Set(groups);
+  filterMode = 'all';
+  groupChips.forEach(chip => chip.classList.remove('inactive'));
+});
+
+document.querySelector('[data-admin="none"]').addEventListener('click', () => {
+  activeGroups.clear();
+  filterMode = 'none';
+  groupChips.forEach(chip => chip.classList.add('inactive'));
+});
+
 
 // Search filter
 document.getElementById('legendSearch').addEventListener('input', e => {
@@ -828,10 +870,8 @@ async function init() {
     console.error('CSV betöltési hiba:', e);
     events = [];
   }
-  buildLegend();
   draw();
 }
-init();
 
 // ===== Zoom / Pan =====
 function zoomTo(newScale, anchorX = canvas.clientWidth / 2) {

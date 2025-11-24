@@ -449,25 +449,122 @@ function chooseTickScale(pxPerYear) {
     }
 
     // Use **median width** to avoid rejecting good scales
+function chooseTickScale(pxPerYear) {
+  // --- FINE UNITS ---
+  const fineUnits = [
+    // Hours
+    {
+      majorStep: 1 / (AVG_YEAR_DAYS * 24),
+      format: v => formatHour(v),
+      type: "hour"
+    },
+
+    // Days
+    {
+      majorStep: 1 / AVG_YEAR_DAYS,
+      format: v => formatDay(v),
+      type: "day"
+    },
+
+    // Months --- IMPORTANT: now placed after days but evaluated separately
+    {
+      majorStep: 1 / 12,
+      format: v => formatMonthYear(v),
+      type: "month"
+    },
+
+    // Year (1)
+    {
+      majorStep: 1,
+      format: v => formatYearHuman(Math.round(v)),
+      type: "year"
+    }
+  ];
+
+  // --- PLURAL YEAR STEPS ---
+  // Adaptive “nice numbers”: 1, 2, 3, 5 × 10^k
+  const niceSteps = [];
+  const bases = [1, 2, 3, 5];
+
+  for (let exp = 0; exp <= 5; exp++) {
+    const pow = Math.pow(10, exp);
+    for (const b of bases) niceSteps.push(b * pow);
+  }
+
+  const yearSteps = niceSteps.map(n => ({
+    majorStep: n,
+    format: formatYearHuman,
+    type: "plural-year"
+  }));
+
+  const candidates = [...fineUnits, ...yearSteps];
+
+  const MIN_GAP = 8;
+
+  // Sample multiple parts of the canvas
+  const sampleX = [
+    canvas.clientWidth * 0.1,
+    canvas.clientWidth * 0.3,
+    canvas.clientWidth * 0.5,
+    canvas.clientWidth * 0.7,
+    canvas.clientWidth * 0.9
+  ];
+
+  ctx.font = "14px sans-serif";
+
+  // We will allow MONTHS a special fallback logic
+  let bestMonthCandidate = null;
+  let bestMonthStepPx = 0;
+
+  for (const c of candidates) {
+    const stepPx = c.majorStep * pxPerYear;
+    if (stepPx <= 0) continue;
+
+    const widths = [];
+
+    for (const sx of sampleX) {
+      const yr = yearForX(sx);
+      const snapped = Math.round(yr / c.majorStep) * c.majorStep;
+      const text = c.format(snapped);
+      const w = ctx.measureText(text).width + 10; // pill padding
+      widths.push(w);
+    }
+
     widths.sort((a, b) => a - b);
     const medianW = widths[Math.floor(widths.length / 2)];
 
-    // Relaxed spacing: if the majority of labels fit, accept this scale
-    if (stepPx >= medianW + MIN_GAP) {
-      return {
-        majorStep: c.majorStep,
-        format: c.format,
-        minor: null,
-      };
+    const fits = stepPx >= medianW + MIN_GAP;
+
+    // ✔ Special handling: MONTHS get “best possible” fallback even when exact spacing fails
+    if (c.type === "month") {
+      if (stepPx > bestMonthStepPx) {
+        bestMonthStepPx = stepPx;
+        bestMonthCandidate = { ...c, medianW };
+      }
+      // If months fit — use them immediately
+      if (fits) return { majorStep: c.majorStep, format: c.format };
+      continue;
     }
+
+    // Normal rule for all other scales
+    if (fits) return { majorStep: c.majorStep, format: c.format };
   }
 
-  // fallback
-  const last = candidates[candidates.length - 1];
+  // --- MONTH FALLBACK ---
+  // If years fit but months *almost* fit,
+  // we allow a “soft monthly” mode to fill the large gap.
+  if (bestMonthCandidate && bestMonthStepPx >= bestMonthCandidate.medianW * 0.75) {
+    // e.g. if spacing is 75% of needed, still show months occasionally
+    return {
+      majorStep: 1 / 12,
+      format: v => formatMonthYear(v)
+    };
+  }
+
+  // Fallback to largest plural step (max zoom-out)
   return {
-    majorStep: last.majorStep,
-    format: last.format,
-    minor: null
+    majorStep: niceSteps[niceSteps.length - 1],
+    format: formatYearHuman
   };
 }
 // ===== Label layout helpers =====

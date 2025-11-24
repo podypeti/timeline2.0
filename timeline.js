@@ -1,4 +1,3 @@
-
 // ===== Version & config =====
 console.log('[timeline] script loaded v6');
 
@@ -390,210 +389,161 @@ function showClusterDetails(cluster) {
 function hideDetails(){ detailsPanel.classList.add('hidden'); detailsContent.innerHTML = ''; }
 detailsClose.addEventListener('click', hideDetails);
 
-// ===== Ticks =====
-function chooseTickScale(pxPerYear) {
-  // Base time units (finest → coarse)
-  const baseUnits = [
-    { majorStep: 1 / (AVG_YEAR_DAYS * 24), format: v => formatHour(v) },  // hour
-    { majorStep: 1 / AVG_YEAR_DAYS,       format: v => formatDay(v) },   // day
-    { majorStep: 1 / 12,                  format: v => formatMonthYear(v) }, // month
-    { majorStep: 1,                       format: v => formatYearHuman(Math.round(v)) }, // year
+// ===== Month smart formatter =====
+function formatMonthSmart(yearFloat, targetWidthPx) {
+  // targetWidthPx is the available width for the pill text (in CSS pixels)
+  // Use actual canvas font measurements to pick the longest readable form.
+  const year = Math.floor(yearFloat);
+  const frac = Math.abs(yearFloat - year);
+  // When negative years (BCE) the fractional calculation still works since we floor.
+  const mIndex = Math.floor(frac * 12);
+  const safeMi = Math.max(0, Math.min(11, isNaN(mIndex) ? 0 : mIndex));
+  const monthName = MONTHS[safeMi];   // Jan, Feb, Mar...
+  const monthLetter = monthName[0];   // J, F, M
+  const monthNumber = (safeMi + 1);   // 1..12
+
+  const yFull = year < 0 ? `${Math.abs(year)} BCE` : `${year} CE`;
+  const yShort = String(year);
+
+  // Candidate forms ordered from longest → shortest
+  const options = [
+    `${monthName} ${yFull}`,           // "March 1245 CE"
+    `${monthName} ${yShort}`,          // "March 1245"
+    `${monthName.slice(0,3)} ${yShort}`, // "Mar 1245"
+    `${monthLetter} ${yShort}`,        // "M 1245"
+    `${monthNumber}/${yShort}`,        // "3/1245"
   ];
 
-  // Dynamically generate “plural” steps (nice numbers):
-  // 1, 2, 5 × 10^k
-  const niceSteps = [];
-  const bases = [1, 2, 5];
-
-  for (let exp = 0; exp <= 5; exp++) {
-    for (const b of bases) {
-      niceSteps.push(b * Math.pow(10, exp));   // e.g. 1, 2, 5, 10, 20, 50, 100, ...
-    }
+  ctx.font = "14px sans-serif"; // ensure consistent measurement
+  // Try to pick the longest that fits
+  for (const opt of options) {
+    if (ctx.measureText(opt).width + 10 <= targetWidthPx) return opt;
   }
 
-  // Convert nice numbers into step candidates (years)
-  const yearSteps = niceSteps.map(n => ({
-    majorStep: n,
-    format: formatYearHuman
-  }));
+  // If nothing fits, return the tightest numeric form
+  return `${monthNumber}/${yShort}`;
+}
 
-  // Combine fine→coarse units
-  const candidates = [...baseUnits, ...yearSteps];
-
-  // Minimum pill gap
-  const MIN_GAP = 6;
-
-  // Sample positions across screen
-  const sampleX = [
-    canvas.clientWidth * 0.15,
-    canvas.clientWidth * 0.35,
-    canvas.clientWidth * 0.55,
-    canvas.clientWidth * 0.75,
-  ];
-
-  ctx.font = '14px sans-serif';
-
-  for (const c of candidates) {
-    const stepPx = c.majorStep * pxPerYear;
-    if (stepPx <= 0) continue;
-
-    const widths = [];
-
-    // Measure label widths for sample ticks
-    for (const sx of sampleX) {
-      const yr = yearForX(sx);
-      const snapped = Math.round(yr / c.majorStep) * c.majorStep;
-      const text = c.format(snapped);
-      const w = ctx.measureText(text).width + 10; // pill padding
-      widths.push(w);
-    }
-
-    // Use **median width** to avoid rejecting good scales
+// ===== Adaptive plural-step + dynamic tick selection =====
 function chooseTickScale(pxPerYear) {
-  // --- FINE UNITS ---
-  const fineUnits = [
-    // Hours
-    {
-      majorStep: 1 / (AVG_YEAR_DAYS * 24),
-      format: v => formatHour(v),
-      type: "hour"
-    },
-
-    // Days
-    {
-      majorStep: 1 / AVG_YEAR_DAYS,
-      format: v => formatDay(v),
-      type: "day"
-    },
-
-    // Months --- IMPORTANT: now placed after days but evaluated separately
-    {
-      majorStep: 1 / 12,
-      format: v => formatMonthYear(v),
-      type: "month"
-    },
-
-    // Year (1)
-    {
-      majorStep: 1,
-      format: v => formatYearHuman(Math.round(v)),
-      type: "year"
-    }
+  // pxPerYear: pixels per 1 year at current scale
+  // Candidate units (fine → coarse)
+  const baseUnits = [
+    { majorStep: 1 / (AVG_YEAR_DAYS * 24), format: v => formatHour(v), type: 'hour' },
+    { majorStep: 1 / AVG_YEAR_DAYS, format: v => formatDay(v), type: 'day' },
+    { majorStep: 1 / 12, format: v => formatMonthYear(v), type: 'month' }, // month will get special handling
+    { majorStep: 1, format: v => formatYearHuman(Math.round(v)), type: 'year' },
   ];
 
-  // --- PLURAL YEAR STEPS ---
-  // Adaptive “nice numbers”: 1, 2, 3, 5 × 10^k
+  // Generate nice year steps (plural steps): 1,2,3,5 × 10^k
+  const niceBases = [1, 2, 3, 5];
   const niceSteps = [];
-  const bases = [1, 2, 3, 5];
-
   for (let exp = 0; exp <= 5; exp++) {
     const pow = Math.pow(10, exp);
-    for (const b of bases) niceSteps.push(b * pow);
+    for (const b of niceBases) niceSteps.push(b * pow);
   }
+  const yearSteps = niceSteps.map(n => ({ majorStep: n, format: formatYearHuman, type: 'plural-year' }));
 
-  const yearSteps = niceSteps.map(n => ({
-    majorStep: n,
-    format: formatYearHuman,
-    type: "plural-year"
-  }));
+  const candidates = [...baseUnits, ...yearSteps];
 
-  const candidates = [...fineUnits, ...yearSteps];
+  const MIN_GAP = 8; // minimal extra gap between pill centers
+  ctx.font = '14px sans-serif';
 
-  const MIN_GAP = 8;
-
-  // Sample multiple parts of the canvas
+  // sample positions across the canvas to estimate widths
   const sampleX = [
-    canvas.clientWidth * 0.1,
-    canvas.clientWidth * 0.3,
-    canvas.clientWidth * 0.5,
-    canvas.clientWidth * 0.7,
-    canvas.clientWidth * 0.9
+    canvas.clientWidth * 0.12,
+    canvas.clientWidth * 0.32,
+    canvas.clientWidth * 0.52,
+    canvas.clientWidth * 0.72,
+    canvas.clientWidth * 0.92,
   ];
 
-  ctx.font = "14px sans-serif";
-
-  // We will allow MONTHS a special fallback logic
+  // Keep best month candidate for fallback
   let bestMonthCandidate = null;
   let bestMonthStepPx = 0;
 
   for (const c of candidates) {
     const stepPx = c.majorStep * pxPerYear;
-    if (stepPx <= 0) continue;
+    if (!(stepPx > 0)) continue;
 
     const widths = [];
 
     for (const sx of sampleX) {
       const yr = yearForX(sx);
+      // snap to nearest tick for that unit
       const snapped = Math.round(yr / c.majorStep) * c.majorStep;
+
+      // For month candidate, try to get a realistic text for the available width
+      if (c.type === 'month') {
+        // available width for a pill at this step
+        const availW = Math.max(24, Math.floor(stepPx - MIN_GAP));
+        const text = formatMonthSmart(snapped, availW);
+        const w = ctx.measureText(text).width + 10;
+        widths.push(w);
+        continue;
+      }
+
+      // normal candidate
       const text = c.format(snapped);
       const w = ctx.measureText(text).width + 10; // pill padding
       widths.push(w);
     }
 
+    // median width to avoid outlier rejection
     widths.sort((a, b) => a - b);
     const medianW = widths[Math.floor(widths.length / 2)];
 
     const fits = stepPx >= medianW + MIN_GAP;
 
-    // ✔ Special handling: MONTHS get “best possible” fallback even when exact spacing fails
-    if (c.type === "month") {
+    if (c.type === 'month') {
       if (stepPx > bestMonthStepPx) {
         bestMonthStepPx = stepPx;
         bestMonthCandidate = { ...c, medianW };
       }
-      // If months fit — use them immediately
-      if (fits) return { majorStep: c.majorStep, format: c.format };
+      if (fits) {
+        // return a format that will adapt per-tick using available width
+        return {
+          majorStep: c.majorStep,
+          format: v => {
+            const avail = Math.max(24, Math.floor((c.majorStep * pxPerYear) - MIN_GAP));
+            return formatMonthSmart(v, avail);
+          },
+          minor: null
+        };
+      }
       continue;
     }
 
-    // Normal rule for all other scales
-    if (fits) return { majorStep: c.majorStep, format: c.format };
-  }
-function formatMonthSmart(yearFloat, targetWidthPx) {
-  const year = Math.floor(yearFloat);
-  const frac = yearFloat - year;
-  const mIndex = Math.floor(frac * 12);
-  const monthName = MONTHS[mIndex];   // Jan, Feb, Mar...
-  const monthLetter = monthName[0];   // J, F, M
-  const monthNumber = (mIndex + 1);   // 1..12
-
-  const y = year < 0 ? `${Math.abs(year)} BCE` : `${year} CE`;
-
-  // Try longest → shortest until one fits
-  const options = [
-    `${monthName} ${y}`,       // "March 1245 CE"
-    `${monthName.slice(0,3)} ${y}`, // "Mar 1245"
-    `${monthLetter} ${year}`,  // "M 1245"
-    `${monthNumber}/${year}`,  // "3/1245"
-  ];
-
-  ctx.font = "14px sans-serif"; // ensure correct measurement
-
-  for (const opt of options) {
-    if (ctx.measureText(opt).width <= targetWidthPx)
-      return opt;
+    if (fits) {
+      return {
+        majorStep: c.majorStep,
+        format: c.format,
+        minor: null
+      };
+    }
   }
 
-  // fallback (extremely tight)
-  return `${monthNumber}/${year}`;
-}
-  // --- MONTH FALLBACK ---
-  // If years fit but months *almost* fit,
-  // we allow a “soft monthly” mode to fill the large gap.
+  // Month soft fallback: if months almost fit (>=75% of median), use months with shortened forms
   if (bestMonthCandidate && bestMonthStepPx >= bestMonthCandidate.medianW * 0.75) {
-    // e.g. if spacing is 75% of needed, still show months occasionally
     return {
       majorStep: 1 / 12,
-      format: v => formatMonthYear(v)
+      format: v => {
+        const avail = Math.max(24, Math.floor(((1/12) * pxPerYear) - MIN_GAP));
+        return formatMonthSmart(v, avail);
+      },
+      minor: null
     };
   }
 
-  // Fallback to largest plural step (max zoom-out)
+  // fallback to coarsest plural step
+  const lastStep = yearSteps[yearSteps.length - 1].majorStep;
   return {
-    majorStep: niceSteps[niceSteps.length - 1],
-    format: formatYearHuman
+    majorStep: lastStep,
+    format: formatYearHuman,
+    minor: null
   };
 }
+
 // ===== Label layout helpers =====
 function rowsForScale() { if (scale >= 800) return 4; if (scale >= 200) return 3; return 2; }
 function gapForScale() { if (scale >= 200) return 8; return 12; }
@@ -661,7 +611,7 @@ function layoutSingleLabels(singleClusters, options = {}) {
 // ===== Main draw =====
 function draw() {
   sizeCanvasToCss();
-  console.log('[timeline] draw()', { W, H, scale, panX });
+  // console.log('[timeline] draw()', { W, H, scale, panX });
   ctx.clearRect(0, 0, W, H);
   drawHitRects = [];
 
@@ -697,6 +647,8 @@ function draw() {
     if (x > -120 && x < W + 120) {
       ctx.strokeStyle = '#00000033';
       ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, 40); ctx.stroke();
+
+      // use the chosen format; for month format it's already adaptive
       const text = format(t);
       const pillW = Math.min(160, ctx.measureText(text).width + 10);
       const pillH = 20;

@@ -2,11 +2,19 @@
 <!DOCTYPE html>
 <html lang="en">
   
+
 <details class="legend-panel">
   <summary>Categories</summary>
-  <input type="text" id="legendSearch" placeholder="Search categories..." style="width:100%; margin:4px 0;">
-  <div id="legend"></div>
+  <div class="legend-content">
+    <input type="text" id="legendSearch" placeholder="Search categories..." />
+    <div class="chip-row">
+      <div class="chip admin" data-admin="all"><span class="swatch green"></span>All</div>
+      <div class="chip admin" data-admin="none"><span class="swatch red"></span>None</div>
+    </div>
+    <div id="legend"></div>
+  </div>
 </details>
+
 
 <head>
   <meta charset="utf-8" />

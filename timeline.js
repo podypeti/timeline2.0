@@ -23,7 +23,6 @@ function clusterPxThreshold() {
 // ===== DOM =====
 const canvas = document.getElementById('timelineCanvas');
 const ctx = canvas.getContext('2d');
-const legendEl = document.getElementById('legend');
 const btnZoomIn = document.getElementById('zoomIn');
 const btnZoomOut = document.getElementById('zoomOut');
 const btnReset = document.getElementById('resetZoom');

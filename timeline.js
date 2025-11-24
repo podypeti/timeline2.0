@@ -392,44 +392,62 @@ detailsClose.addEventListener('click', hideDetails);
 
 // ===== Ticks =====
 function chooseTickScale(pxPerYear) {
-  // List of possible tick units (from fine → coarse)
-  // Each unit has:
-  //  majorStep: numeric years
-  //  label: formatting function
-  //  estLabelWidth: typical label width in pixels
+  // Candidate scales ordered from fine → coarse
   const candidates = [
-    { majorStep: 1/365.2425, label: v => formatHour(v), estLabelWidth: 120 },    // hours
-    { majorStep: 1/365.2425/6, label: v => formatDay(v), estLabelWidth: 110 },   // days
-    { majorStep: 1/12, label: v => formatMonthYear(v), estLabelWidth: 90 },      // months
-    { majorStep: 1, label: v => formatYearHuman(Math.round(v)), estLabelWidth: 60 }, // years
-    { majorStep: 10, label: formatYearHuman, estLabelWidth: 65 },                // decades
-    { majorStep: 100, label: formatYearHuman, estLabelWidth: 70 },               // centuries
-    { majorStep: 1000, label: formatYearHuman, estLabelWidth: 80 },              // millennia
+    { majorStep: 1 / (AVG_YEAR_DAYS * 24), format: v => formatHour(v) },   // hour
+    { majorStep: 1 / AVG_YEAR_DAYS,       format: v => formatDay(v) },    // day
+    { majorStep: 1 / 12,                  format: v => formatMonthYear(v) }, // month
+    { majorStep: 1,                       format: v => formatYearHuman(Math.round(v)) }, // year
+    { majorStep: 10,                      format: formatYearHuman },      // decade
+    { majorStep: 100,                     format: formatYearHuman },      // century
+    { majorStep: 1000,                    format: formatYearHuman },      // millennia
   ];
 
-  // Minimum required gap between tick label pills
-  const MIN_GAP = 12;
+  const MIN_GAP = 10; // minimum padding between labels
 
-  // Try candidates from finest to coarsest
+  // Use canvas font to measure label width precisely
+  ctx.font = '14px sans-serif';
+
+  // We measure using 5 sample ticks across the visible range
+  const sampleX = [
+    canvas.clientWidth * 0.05,
+    canvas.clientWidth * 0.25,
+    canvas.clientWidth * 0.5,
+    canvas.clientWidth * 0.75,
+    canvas.clientWidth * 0.95,
+  ];
+
   for (const c of candidates) {
     const stepPx = c.majorStep * pxPerYear;
-    const requiredWidth = c.estLabelWidth + MIN_GAP;
+    if (stepPx <= 0) continue;
 
-    if (stepPx >= requiredWidth) {
+    // Estimate worst-case label width dynamically
+    let maxLabelW = 0;
+
+    for (const sx of sampleX) {
+      const yearHere = yearForX(sx);
+      const snapped = Math.round(yearHere / c.majorStep) * c.majorStep;
+      const text = c.format(snapped);
+      const w = ctx.measureText(text).width + 12; // pill padding
+      if (w > maxLabelW) maxLabelW = w;
+    }
+
+    // Check if labels fit with gap
+    if (stepPx >= maxLabelW + MIN_GAP) {
       return {
         majorStep: c.majorStep,
-        format: c.label,
-        minor: null,
+        format: c.format,
+        minor: null
       };
     }
   }
 
-  // Fallback: extremely zoomed out → millennia
+  // fallback → coarsest
   const last = candidates[candidates.length - 1];
   return {
     majorStep: last.majorStep,
-    format: last.label,
-    minor: null,
+    format: last.format,
+    minor: null
   };
 }
 // ===== Label layout helpers =====

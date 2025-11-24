@@ -271,22 +271,19 @@ function parseCSV(text) {
 }
 
 // ===== Legend =====
+
 function buildLegend() {
   const groups = [...new Set(events.map(e => e['Group']).filter(Boolean))].sort();
   legendEl.innerHTML = '';
   groupChips.clear();
 
+  // Admin chips
   const addAdminChip = (label, onClick, color = '#444') => {
     const chip = document.createElement('div');
     chip.className = 'chip';
     chip.dataset.admin = label;
-    const sw = document.createElement('span');
-    sw.className = 'swatch';
-    sw.style.background = color;
-    const text = document.createElement('span');
-    text.textContent = label;
-    chip.appendChild(sw);
-    chip.appendChild(text);
+    chip.style.background = color;
+    chip.textContent = label;
     chip.addEventListener('click', onClick);
     legendEl.appendChild(chip);
   };
@@ -305,17 +302,13 @@ function buildLegend() {
     draw();
   }, '#c33');
 
+  // Group chips
   groups.forEach(g => {
     const chip = document.createElement('div');
     chip.className = 'chip';
     chip.dataset.group = g;
-    const sw = document.createElement('span');
-    sw.className = 'swatch';
-    sw.style.background = getGroupColor(g);
-    const label = document.createElement('span');
-    label.textContent = g;
-    chip.appendChild(sw);
-    chip.appendChild(label);
+    chip.style.background = getGroupColor(g);
+    chip.textContent = g;
     chip.addEventListener('click', () => {
       filterMode = 'custom';
       if (activeGroups.has(g)) {
@@ -332,6 +325,14 @@ function buildLegend() {
     activeGroups.add(g);
   });
 }
+
+// Search filter
+document.getElementById('legendSearch').addEventListener('input', e => {
+  const term = e.target.value.toLowerCase();
+  groupChips.forEach((chip, group) => {
+    chip.style.display = group.toLowerCase().includes(term) ? 'inline-flex' : 'none';
+  });
+});
 
 // ===== Details =====
 function escapeHtml(s) {

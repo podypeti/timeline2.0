@@ -852,25 +852,6 @@ function initScaleAndPan() {
   setPanValueLabel(INITIAL_CENTER_YEAR);
 }
 
-async function init() {
-  anchorJD = gregorianToJDN(MIN_YEAR, 1, 1);
-  initScaleAndPan();
-  draw(); // initial empty draw
-
-  try {
-    // Load CSV data
-    events = await loadCsv(./timeline-data.csv);
-    console.log('[timeline] events loaded:', events.length);
-
-    // Build legend AFTER events are loaded
-    buildLegend();
-    draw(); // redraw with data
-  } catch (e) {
-    console.error('CSV load error:', e);
-    events = [];
-  }
-}
-  draw();
 
 // ===== Zoom / Pan =====
 function zoomTo(newScale, anchorX = canvas.clientWidth / 2) {

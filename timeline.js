@@ -882,7 +882,7 @@ async function init() {
 
   try {
     // Load CSV data
-    events = await loadCsv(`./timeline-data.csv?v=${ASSET_VERSION}`);
+    events = await loadCsv(./timeline-data.csv);
     console.log('[timeline] events loaded:', events.length);
 
     // Build legend AFTER events are loaded

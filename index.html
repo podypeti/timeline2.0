@@ -5,9 +5,17 @@
   <meta charset="utf-8" />
   <title>History Timeline</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="stylesheet" href
+  ./style.css
+</head>
+<body>
+
+  <!-- Timeline Canvas -->
   <div id="timelineContainer">
-    <canvas id="timelineCanvas" width="1200" height="560"></canvasControls">
+    <canvas id="timelineCanvas" width="1200" height="560" aria-label="Timeline"></canvas>
+  </div>
+
+  <!-- Legend / Filters -->
+  <div class="legendControls">
     <div class="inner">
       <details class="legend-panel" open>
         <summary>Categories</summary>
@@ -27,26 +35,41 @@
     </div>
   </div>
 
-  <aside id="detailsPanel" class="details hidden">
-    <button id="detailsClose" class="close">×</button>
+  <!-- Details Panel -->
+  <aside id="detailsPanel" class="details hidden" role="dialog" aria-modal="true">
+    <button id="detailsClose" class="close" aria-label="Close">×</button>
     <div id="detailsContent"></div>
   </aside>
 
+  <!-- Pan Slider -->
   <div class="panSliderBar">
     <span class="panLabel">Center:</span>
     <input id="panSlider" type="range" />
     <span id="panValue" class="panValue">1 CE</span>
   </div>
 
+  <!-- Scripts -->
   ./timeline.js</script>
   <script>
-    const CSV_URL ="https://github.com/podypeti/timeline/blob/main/timeline-data.csv"; // adjust path
+    // === Configure your CSV path here ===
+    const CSV_URL = './data/events.csv'; 
+    // If hosted on GitHub raw:
+    // const CSV_URL = 'https://raw.githubusercontent.com/<user>/<repo>/<branch>/timeline/data/events.csv';
+
     (async function start() {
-      const rows = await loadCsv(CSV_URL);
-      events = rows;
-      buildLegend();
-      initScaleAndPan();
-      draw();
+      try {
+        const rows = await loadCsv(CSV_URL);    // parse CSV -> array of objects
+        events = rows;                          // provide data to the timeline
+        buildLegend();                          // build category chips
+        initScaleAndPan();                      // compute scale + center
+        draw();                                 // first render
+      } catch (err) {
+        console.error('[timeline] failed to load CSV', err);
+        const panel = document.getElementById('detailsPanel');
+        const content = document.getElementById('detailsContent');
+        content.innerHTML = '<p><strong>Error:</strong> Could not load CSV. Check URL and CORS.</p>';
+        panel.classList.remove('hidden');
+      }
     })();
   </script>
 </body>

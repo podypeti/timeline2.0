@@ -279,29 +279,6 @@ let filterMode = 'all';
 // Example categories
 const groups = ['History', 'War', 'Religion', 'Science', 'Art'];
 
-function getGroupIcon(group) {
-  const iconMap = {
-    'History': '📜',
-    'War': '⚔️',
-    'Religion': '⛪',
-    'Science': '🔬',
-    'Art': '🎨'
-  };
-  return iconMap[group] || '📌';
-}
-
-function getGroupColor(group) {
-  const colorMap = {
-    'History': '#f4c542',
-    'War': '#d9534f',
-    'Religion': '#5bc0de',
-    'Science': '#5cb85c',
-    'Art': '#f0ad4e'
-  };
-  return colorMap[group] || '#999';
-}
-
-
 function buildLegend() {
   const groups = [...new Set(events.map(e => e['Group']).filter(Boolean))].sort();
 

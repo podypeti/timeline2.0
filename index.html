@@ -56,7 +56,7 @@
     // If hosted on GitHub raw:
     // const CSV_URL = 'https://raw.githubusercontent.com/<user>/<repo>/<branch>/timeline/data/events.csv';
 
-    (async function start() {
+    async function start() {
       try {
         const rows = await loadCsv(CSV_URL);    // parse CSV -> array of objects
         events = rows;                          // provide data to the timeline
@@ -70,7 +70,7 @@
         content.innerHTML = '<p><strong>Error:</strong> Could not load CSV. Check URL and CORS.</p>';
         panel.classList.remove('hidden');
       }
-    })();
+    }();
   </script>
 </body>
 </html>

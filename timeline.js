@@ -279,6 +279,21 @@ let filterMode = 'all';
 // Example categories
 const groups = ['History', 'War', 'Religion', 'Science', 'Art'];
 
+function addAdminChip(label, onClick, color) {
+  const chip = document.createElement('div');
+  chip.className = 'chip';
+  chip.dataset.admin = label.toLowerCase();
+  const sw = document.createElement('span');
+  sw.className = 'swatch';
+  sw.style.background = color;
+  const text = document.createElement('span');
+  text.textContent = label;
+  chip.appendChild(sw);
+  chip.appendChild(text);
+  chip.addEventListener('click', onClick);
+  legendEl.appendChild(chip);
+}
+
 function buildLegend() {
   const groups = [...new Set(events.map(e => e['Group']).filter(Boolean))].sort();
 

@@ -294,20 +294,17 @@ function getGroupIcon(group) {
   };
   return map[group] || '•';
 }
-
-
 const legendEl = document.getElementById('legend');
 const groupChips = new Map();
 let activeGroups = new Set();
 let filterMode = 'all';
 
-// Example categories
-const groups = ['History', 'War', 'Religion', 'Science', 'Art'];
 
+// --- Legend helpers ---
 function addAdminChip(label, onClick, color) {
   const chip = document.createElement('div');
   chip.className = 'chip';
-  chip.dataset.admin = label.toLowerCase();
+  chip.dataset.admin = label.toLowerCase(); // 'all' or 'none'
   const sw = document.createElement('span');
   sw.className = 'swatch';
   sw.style.background = color;
@@ -317,6 +314,30 @@ function addAdminChip(label, onClick, color) {
   chip.appendChild(text);
   chip.addEventListener('click', onClick);
   legendEl.appendChild(chip);
+}
+
+function getGroupIcon(group) {
+  if (!group) return '•';
+  const map = {
+    'Bible writing': '📚',
+    'Bible copy/translation': '📜',
+    'Bible copy/translation ': '📜', // trailing-space safety
+    'Events': '⭐',
+    'Persons': '👤',
+    'Covenants': '📜',
+    'Judges': '⚖️',
+    'Kings of Israel': '👑',
+    'Kings of Judah': '👑',
+    'Prophets': '📖',
+    'World powers': '🌍',
+    'Jesus': '✝️',
+    'Time periods': '⏳',
+    'Modern day history of JW': '🕊️',
+    'King of the North': '⬆️',
+    'King of the South': '⬇️',
+    "Paul's journeys": '🛤️',
+  };
+  return map[group.trim?.() ?? group] || '•';
 }
 
 function buildLegend() {

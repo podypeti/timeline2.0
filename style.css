@@ -238,6 +238,11 @@ body { margin: 0; background: var(--bg); font-family: Arial, sans-serif; color: 
   max-width: 360px; /* adjust to taste */
 }
 
+.legend-content {
+  max-height: 260px;
+  overflow-y: auto;
+}
+
 .chip-icon {
   margin-right: 6px;
   font-size: 14px;

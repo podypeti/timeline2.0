@@ -286,7 +286,7 @@ function getGroupIcon(group) {
     'Kings of Judah': '👑',
     'Prophets': '📖',
     'World powers': '🌍',
-    'Jesus': '✝️',
+    'Jesus': '🤴',
     'Time periods': '⏳',
     'Modern day history of JW': '🕊️',
     'King of the North': '⬆️',
@@ -306,12 +306,6 @@ function buildLegend() {
   filterMode = 'all';
   activeGroups = new Set(groups);
 
-  addAdminChip('All', () => {
-    activeGroups = new Set(groups);
-    filterMode = 'all';
-    groupChips.forEach(chip => chip.classList.remove('inactive'));
-    draw();
-  }, '#2c7');
   addAdminChip('None', () => {
     activeGroups.clear();
     filterMode = 'none';

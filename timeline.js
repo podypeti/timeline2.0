@@ -28,8 +28,6 @@ const btnReset = document.getElementById('resetZoom');
 const detailsPanel = document.getElementById('detailsPanel');
 const detailsClose = document.getElementById('detailsClose');
 const detailsContent = document.getElementById('detailsContent');
-const panSlider = document.getElementById('panSlider');
-const panValue = document.getElementById('panValue');
 const legendEl = document.getElementById('legend');
 
 // ===== State =====
@@ -626,9 +624,6 @@ function draw() {
   // center line + center-year label + slider sync
   ctx.strokeStyle = '#00000033';
   ctx.beginPath(); ctx.moveTo(W / dpr / 2, 0); ctx.lineTo(W / dpr / 2, H / dpr); ctx.stroke();
-  const centerYear = yearForX(canvas.clientWidth / 2);
-  panSlider.value = Math.round(centerYear);
-  setPanValueLabel(centerYear);
   ctx.fillStyle = '#00000066'; ctx.font = '12px sans-serif'; ctx.textBaseline = 'bottom';
   ctx.fillText(formatYearHuman(Math.round(centerYear)), (W / dpr / 2) + 6, H / dpr - 6);
 
@@ -810,12 +805,7 @@ canvas.addEventListener('mouseleave', () => { isDragging = false; });
 canvas.addEventListener('touchstart', (e) => { if (e.touches.length === 1) { isDragging = true; dragStartX = e.touches[0].clientX; } }, { passive: true });
 canvas.addEventListener('touchmove', (e) => { if (isDragging && e.touches.length === 1) { panX += (e.touches[0].clientX - dragStartX); dragStartX = e.touches[0].clientX; draw(); } }, { passive: true });
 canvas.addEventListener('touchend', () => { isDragging = false; });
-// Slider → center
-panSlider.addEventListener('input', () => {
-  const targetYear = parseFloat(panSlider.value);
-  setPanValueLabel(targetYear);
-  centerOnYear(targetYear);
-});
+
 
 // ===== Hit test =====
 canvas.addEventListener('click', (e) => {

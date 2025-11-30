@@ -620,12 +620,12 @@ function draw() {
     t += majorStep;
   }
   ctx.restore();
-
-  // center line + center-year label + slider sync
-  ctx.strokeStyle = '#00000033';
-  ctx.beginPath(); ctx.moveTo(W / dpr / 2, 0); ctx.lineTo(W / dpr / 2, H / dpr); ctx.stroke();
-  ctx.fillStyle = '#00000066'; ctx.font = '12px sans-serif'; ctx.textBaseline = 'bottom';
-  ctx.fillText(formatYearHuman(Math.round(centerYear)), (W / dpr / 2) + 6, H / dpr - 6);
+// center line + center-year label
+ctx.strokeStyle = '#00000033';
+ctx.beginPath();
+ctx.moveTo(W / dpr / 2, 0);
+ctx.lineTo(W / dpr / 2, H / dpr);
+ctx.stroke();
 
   // rows Y
   const rowYPoint = 110;

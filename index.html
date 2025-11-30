@@ -10,6 +10,7 @@
 
   <!-- Timeline Canvas -->
 
+
 <div id="timelineContainer">
   <!-- Top toolbar -->
   <div class="timelineToolbar">
@@ -17,10 +18,18 @@
       <summary>Categories</summary>
       <div class="legend-content">
         <input id="legendSearch" type="search" placeholder="Search categories…" />
-        <!-- All/None + groups are created dynamically in JS; do not hardcode them -->
         <div id="legend"></div>
       </div>
     </details>
+
+    <!-- NEW: Event search -->
+    <input
+      id="eventSearch"
+      class="toolbarSearch"
+      type="search"
+      placeholder="Search events… (title, text, date, group)"
+      aria-label="Search events"
+    />
 
     <div class="toolbarSpacer"></div>
 
@@ -34,6 +43,7 @@
   <!-- Canvas -->
   <canvas id="timelineCanvas" width="1200" height="560" aria-label="Timeline"></canvas>
 </div>
+
   <!-- Details Panel -->
   <aside id="detailsPanel" class="details hidden" role="dialog" aria-modal="true">
     <button id="detailsClose" class="close" aria-label="Close">×</button>

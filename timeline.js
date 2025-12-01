@@ -631,23 +631,8 @@ ctx.stroke();
 // ✅ Declare centerYear safely
 const centerYear = yearForX(canvas.clientWidth / 2);
 
-// If you removed panSlider/panValue, guard or delete these:
-if (typeof panSlider !== 'undefined' && panSlider) {
-  panSlider.value = Math.round(centerYear);
-}
-if (typeof setPanValueLabel === 'function' && typeof panValue !== 'undefined' && panValue) {
-  setPanValueLabel(centerYear);
-}
+// if (typeof setPanValueLabel === 'function' && typeof panValue !== 'undefined' && panValue) {  setPanValueLabel(centerYear);}
 
-// Optional bottom label (comment out if not needed):
-// ctx.fillStyle = '#00000066';
-// ctx.font = '12px sans-serif';
-// ctx.textBaseline = 'bottom';
-// ctx.fillText(formatYearHuman(Math.round(centerYear)), (W / dpr / 2) + 6, H / dpr - 6);
-
-
-// Always compute centerYear locally (no globals)
-const centerYear = yearForX(canvas.clientWidth / 2);
 
   // rows Y
   const rowYPoint = 110;
@@ -763,16 +748,7 @@ const centerYear = yearForX(canvas.clientWidth / 2);
 }
 
 // ===== Init =====
-function initScaleAndPan() {
-  sizeCanvasToCss();
-  scale = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, canvas.clientWidth / (MAX_YEAR - MIN_YEAR)));
-  panX = (canvas.clientWidth / 2) - ((INITIAL_CENTER_YEAR - MIN_YEAR) * scale);
-  panSlider.min = String(MIN_YEAR);
-  panSlider.max = String(MAX_YEAR);
-  panSlider.step = "1";
-  panSlider.value = String(INITIAL_CENTER_YEAR);
-  setPanValueLabel(INITIAL_CENTER_YEAR);
-}
+// function initScaleAndPan() {sizeCanvasToCss();  scale = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, canvas.clientWidth / (MAX_YEAR - MIN_YEAR)));  panX = (canvas.clientWidth / 2) - ((INITIAL_CENTER_YEAR - MIN_YEAR) * scale);  panSlider.min = String(MIN_YEAR);  panSlider.max = String(MAX_YEAR);  panSlider.step = "1";  panSlider.value = String(INITIAL_CENTER_YEAR);  setPanValueLabel(INITIAL_CENTER_YEAR);}
 
 // ===== Zoom / Pan =====
 function zoomTo(newScale, anchorX = canvas.clientWidth / 2) {

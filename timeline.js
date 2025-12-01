@@ -620,12 +620,31 @@ function draw() {
     t += majorStep;
   }
   ctx.restore();
+
 // center line + center-year label
 ctx.strokeStyle = '#00000033';
 ctx.beginPath();
 ctx.moveTo(W / dpr / 2, 0);
 ctx.lineTo(W / dpr / 2, H / dpr);
 ctx.stroke();
+
+// ✅ Declare centerYear safely
+const centerYear = yearForX(canvas.clientWidth / 2);
+
+// If you removed panSlider/panValue, guard or delete these:
+if (typeof panSlider !== 'undefined' && panSlider) {
+  panSlider.value = Math.round(centerYear);
+}
+if (typeof setPanValueLabel === 'function' && typeof panValue !== 'undefined' && panValue) {
+  setPanValueLabel(centerYear);
+}
+
+// Optional bottom label (comment out if not needed):
+// ctx.fillStyle = '#00000066';
+// ctx.font = '12px sans-serif';
+// ctx.textBaseline = 'bottom';
+// ctx.fillText(formatYearHuman(Math.round(centerYear)), (W / dpr / 2) + 6, H / dpr - 6);
+
 
 // Always compute centerYear locally (no globals)
 const centerYear = yearForX(canvas.clientWidth / 2);
@@ -765,29 +784,39 @@ function zoomTo(newScale, anchorX = canvas.clientWidth / 2) {
 }
 
 
+
 function resetAll() {
   // Clear event search
   const es = document.getElementById('eventSearch');
   if (es) es.value = '';
   eventSearchTerm = '';
 
-  // Restore ALL categories
+  // Restore all categories
   const groups = [...new Set(events.map(e => (e['Group'] ?? '').trim()).filter(Boolean))];
   activeGroups = new Set(groups);
   filterMode = 'all';
   groupChips.forEach(chip => chip.classList.remove('inactive'));
 
-  // Clear legend search and show all chips
+  // Clear legend search
   const ls = document.getElementById('legendSearch');
   if (ls) {
     ls.value = '';
-    groupChips.forEach(chip => { chip.style.display = 'inline-flex'; });
+    groupChips.forEach(chip => chip.style.display = 'inline-flex');
   }
 
-  // Reset scale/center, then redraw
+  // Reset zoom/pan
   initScaleAndPan();
+
+  // Collapse categories panel if desired
+  const legendDetails = document.querySelector('.legend-panel');
+  if (legendDetails) legendDetails.open = false;
+
   draw();
 }
+
+
+const btnResetFloating = document.getElementById('resetZoomFloating');
+if (btnResetFloating) btnResetFloating.addEventListener('click', resetAll);
 
 
 function zoomIn(anchorX){ zoomTo(scale * 1.3, anchorX); }

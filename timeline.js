@@ -847,5 +847,11 @@ canvas.addEventListener('click', (e) => {
   }
 });
 
+function escapeHtml(s) {
+  const map = { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' };
+  return String(s ?? '').replace(/[&<>"']/g, c => map[c]);
+}
+function escapeAttr(s) { return escapeHtml(s); }
+const mediaHtml = ev['Media']
 // ===== Responsive =====
 window.addEventListener('resize', () => { draw(); });

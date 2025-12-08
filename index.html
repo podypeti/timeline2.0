@@ -1,95 +1,82 @@
-<!DOCTYPE html>
+
+<!doctype html>
 <html lang="en">
-<head> 
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<head>
+  <meta charset="utf-8" />
   <title>History Timeline</title>
-  <link rel="stylesheet" href="./style.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <!-- Your stylesheet -->
+  style.css?v=6-patch2
 </head>
 <body>
 
-  <!-- Timeline Canvas -->
+  <!-- Floating Reset button (top-right) -->
+  <button id="resetZoomFloating" class="resetFloating" title="Reset view">Reset</button>
 
+  <div id="timelineContainer">
+    <!-- Toolbar sitting over the canvas -->
+    <div class="timelineToolbar">
+      <!-- Legend dropdown -->
+      <details class="legend-panel">
+        <summary>Categories</summary>
+        <div class="legend-content">
+          <input id="legendSearch" type="text" placeholder="Filter categories…" />
+          <div id="legend"></div>
+        </div>
+      </details>
 
-<div id="timelineContainer">
-  <!-- Top toolbar -->
-  <div class="timelineToolbar">
-    <details class="legend-panel">
-      <summary>Categories</summary>
-      <div class="legend-content">
-        <input id="legendSearch" type="search" placeholder="Search categories…" />
-        <div id="legend"></div>
+      <!-- Search across events -->
+      <input id="eventSearch" class="toolbarSearch" type="text" placeholder="Search events… (title, text, date, group)" />
+
+      <div class="toolbarSpacer"></div>
+
+      <!-- Zoom controls -->
+      <div class="zoomGroup">
+        <button id="zoomOut" class="ghost" aria-label="Zoom out">−</button>
+        <button id="zoomIn" class="ghost" aria-label="Zoom in">+</button>
+        <button id="resetZoom" class="ghost" aria-label="Reset">Reset</button>
       </div>
-    </details>
-
-    <!-- NEW: Event search -->
-    <input
-      id="eventSearch"
-      class="toolbarSearch"
-      type="search"
-      placeholder="Search events… (title, text, date, group)"
-      aria-label="Search events"
-    />
-
-    <div class="toolbarSpacer"></div>
-
-    <div class="zoomGroup">
-      <button id="zoomOut" class="ghost" title="Zoom out">−</button>
-      <button id="zoomIn"  class="ghost" title="Zoom in">+</button>
     </div>
+
+    <!-- Main timeline canvas -->
+    <canvas id="timelineCanvas"></canvas>
   </div>
 
-  <!-- Canvas -->
-  <canvas id="timelineCanvas" width="1200" height="560" aria-label="Timeline"></canvas>
-</div>
-
-  <!-- Details Panel -->
-  <aside id="detailsPanel" class="details hidden" role="dialog" aria-modal="true">
+  <!-- Event details panel -->
+  <div id="detailsPanel" class="details hidden" aria-live="polite" aria-label="Event details">
     <button id="detailsClose" class="close" aria-label="Close">×</button>
     <div id="detailsContent"></div>
-  </aside>
-
-  <!-- Pan Slider
-  <div class="panSliderBar">
-    <span class="panLabel">Center:</span>
-    <input id="panSlider" type="range" />
-    <span id="panValue" class="panValue">1 CE</span>
-  </div> -->
+  </div>
 
   <!-- Scripts -->
-  <script src="./timeline.js"></script>
- 
+  timeline.js?v=6-patch2</script>
+  <script>
+    // Start once DOM is ready: load CSV, then build UI and draw
+    document.addEventListener('DOMContentLoaded', async () => {
+      try {
+        // Adjust path if your CSV lives elsewhere
+        const rows = await loadCsv('timeline-data.csv');
+        window.events = rows;
 
-<script>
-  async function start() {
-    try {
-      // Load your CSV (adjust path if your file lives elsewhere)
-      const rows = await loadCsv('timeline-data.csv');
+        // Build legend and wire inputs
+        buildLegend();
 
-      // Make available to timeline.js logic
-      window.events = rows;
+        // Initialize the scale/pan (this must exist in timeline.js)
+        initScaleAndPan();
 
-      // Build legend, set initial zoom/pan, draw once
-      buildLegend();
-      initScaleAndPan();
-      draw();
-    } catch (err) {
-      console.error('[timeline] failed to load CSV', err);
-      // Optional: show a small inline notice like in your screenshot
-      const detailsContent = document.getElementById('detailsContent');
-      const detailsPanel = document.getElementById('detailsPanel');
-      if (detailsContent && detailsPanel) {
-        detailsContent.innerHTML = `<p><strong>Error:</strong> Could not load CSV. Check URL and CORS.</p>`;
-        detailsPanel.classList.remove('hidden');
+        // First render
+        draw();
+      } catch (err) {
+        console.error('[timeline] failed to load CSV', err);
+        // Optional: inform the user in the details panel
+        const detailsContent = document.getElementById('detailsContent');
+        const detailsPanel = document.getElementById('detailsPanel');
+        if (detailsContent && detailsPanel) {
+          detailsContent.innerHTML = '<p><strong>Error:</strong> Could not load CSV. Check file path and CORS.</p>';
+          detailsPanel.classList.remove('hidden');
+        }
       }
-    }
-  }
-
-  // Run when DOM is ready
-  document.addEventListener('DOMContentLoaded', start);
-</script>
-
-
-  <button id="resetZoomFloating" class="resetFloating" title="Reset">Reset</button>
+    });
+  </script>
 </body>
 </html>

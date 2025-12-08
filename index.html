@@ -59,25 +59,36 @@
   <!-- Scripts -->
   <script src="./timeline.js"></script>
  
-<script>
-  const CSV_URL = new URL('timeline-data.csv', window.location.href).toString();
 
+<script>
   async function start() {
     try {
-      const rows = await timelineLoadCsv(CSV_URL);  // uses loadCsv() from timeline.js
-      window.events = rows;                         // make data available
-      timelineBuildLegend();                        // build category chips
-      timelineInit();                               // init scale + first draw
+      // Load your CSV (adjust path if your file lives elsewhere)
+      const rows = await loadCsv('timeline-data.csv');
+
+      // Make available to timeline.js logic
+      window.events = rows;
+
+      // Build legend, set initial zoom/pan, draw once
+      buildLegend();
+      initScaleAndPan();
+      draw();
     } catch (err) {
       console.error('[timeline] failed to load CSV', err);
-      const panel = document.getElementById('detailsPanel');
-      const content = document.getElementById('detailsContent');
-      content.innerHTML = '<p><strong>Error:</strong> Could not load CSV. Check URL and CORS.</p>';
-      panel.classList.remove('hidden');
+      // Optional: show a small inline notice like in your screenshot
+      const detailsContent = document.getElementById('detailsContent');
+      const detailsPanel = document.getElementById('detailsPanel');
+      if (detailsContent && detailsPanel) {
+        detailsContent.innerHTML = `<p><strong>Error:</strong> Could not load CSV. Check URL and CORS.</p>`;
+        detailsPanel.classList.remove('hidden');
+      }
     }
   }
-  start();
+
+  // Run when DOM is ready
+  document.addEventListener('DOMContentLoaded', start);
 </script>
+
 
   <button id="resetZoomFloating" class="resetFloating" title="Reset">Reset</button>
 </body>

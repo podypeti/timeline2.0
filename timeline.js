@@ -597,6 +597,15 @@ function layoutSingleLabels(singleClusters, options = {}) {
 // ===== Main draw =====
 function draw() {
   sizeCanvasToCss();
+  
+console.log('[diag] draw() events:',
+    Array.isArray(events) ? events.length : 'events not array');
+  // If zero, draw a hint so we can see it on canvas:
+  if (!Array.isArray(events) || events.length === 0) {
+    ctx.fillStyle = '#000'; ctx.font = '14px sans-serif';
+    ctx.fillText('No events loaded. Check CSV path and CORS.', 18, 28);
+    return;
+}
   ctx.clearRect(0, 0, W, H);
   drawHitRects = [];
   ctx.fillStyle = '#ffffff';

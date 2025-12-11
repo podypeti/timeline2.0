@@ -50,7 +50,7 @@
   </div>
 
   <!-- Load timeline script first -->
-  <script src=timeline.js></script>
+  <script src=timeline.js?v=6-patch2></script>
 
   <!-- Then run the bootstrap AFTER DOM is ready -->
   <script defer>
@@ -61,7 +61,8 @@
         buildLegend();
         initScaleAndPan();
         draw();
-      } catch (err) {
+      } 
+      catch (err) {
         console.error('[timeline] failed to load CSV', err);
         // Optional: show a small inline notice
         const detailsContent = document.getElementById('detailsContent');

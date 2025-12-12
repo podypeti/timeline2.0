@@ -29,6 +29,7 @@ const detailsPanel = document.getElementById('detailsPanel');
 const detailsClose = document.getElementById('detailsClose');
 const detailsContent = document.getElementById('detailsContent');
 const legendEl = document.getElementById('legend');
+const hoverTooltip = document.getElementById('hoverTooltip');
 
 // ===== State =====
 let dpr = Math.max(1, window.devicePixelRatio || 1);
@@ -833,6 +834,32 @@ canvas.addEventListener('touchstart', (e) => { if (e.touches.length === 1) { isD
 canvas.addEventListener('touchmove', (e) => { if (isDragging && e.touches.length === 1) { panX += (e.touches[0].clientX - dragStartX); dragStartX = e.touches[0].clientX; draw(); } }, { passive: true });
 canvas.addEventListener('touchend', () => { isDragging = false; });
 
+// Hover tooltips
+canvas.addEventListener('mousemove', (e) => {
+  const rect = canvas.getBoundingClientRect();
+  const x = (e.clientX - rect.left);
+  const y = (e.clientY - rect.top);
+
+  // Search last rect first for topmost hit
+  for (let i = drawHitRects.length - 1; i >= 0; i--) {
+    const p = drawHitRects[i];
+    if (x >= p.x && x <= p.x + p.w && y >= p.y && y <= p.y + p.h) {
+      let headline = '';
+      if (p.kind === 'cluster') {
+        const c = p.cluster;
+        headline = `${c.events.length} events`;
+      } else {
+        const ev = p.ev;
+        headline = (ev['Headline'] || ev['Text'] || '(no title)').trim();
+      }
+      // place tooltip at mouse position
+      setTooltip(headline, e.clientX, e.clientY);
+      return;
+    }
+  }
+  hideTooltip();
+});
+canvas.addEventListener('mouseleave', hideTooltip);
 
 // ===== Hit test =====
 canvas.addEventListener('click', (e) => {
@@ -849,6 +876,22 @@ canvas.addEventListener('click', (e) => {
     }
   }
 });
+
+function setTooltip(text, x, y) {
+  if (!hoverTooltip) return;
+  if (!text) {
+    hoverTooltip.classList.remove('show');
+    hoverTooltip.setAttribute('aria-hidden', 'true');
+    return;
+  }
+  hoverTooltip.textContent = text;
+  hoverTooltip.style.left = `${x}px`;
+  hoverTooltip.style.top  = `${y}px`;
+  hoverTooltip.classList.add('show');
+  hoverTooltip.setAttribute('aria-hidden', 'false  hoverTooltip.setAttribute('aria-hidden', 'false');
+}
+function hideTooltip() {
+  setTooltip('', 0, 0);
 
 function escapeHtml(s) {
   const map = { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' };

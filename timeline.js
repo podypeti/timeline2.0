@@ -888,7 +888,7 @@ function setTooltip(text, x, y) {
   hoverTooltip.style.left = `${x}px`;
   hoverTooltip.style.top  = `${y}px`;
   hoverTooltip.classList.add('show');
-  hoverTooltip.setAttribute('aria-hidden', 'false  hoverTooltip.setAttribute('aria-hidden', 'false');
+  hoverTooltip.setAttribute('aria-hidden', 'false');
 }
 function hideTooltip() {
   setTooltip('', 0, 0);

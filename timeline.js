@@ -892,7 +892,7 @@ function setTooltip(text, x, y) {
 }
 function hideTooltip() {
   setTooltip('', 0, 0);
-
+}
 function escapeHtml(s) {
   const map = { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' };
   return String(s ?? '').replace(/[&<>"']/g, c => map[c]);

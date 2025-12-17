@@ -702,13 +702,18 @@ function draw() {
         const barWidth = Math.max(4, xR - xL);
         const bar = { ev, x: xL, w: barWidth, color: col, title };
 
-        if (group === 'Time periods') {
-          // route into the dedicated band
-          timePeriodBars.push(bar);
-        } else {
-          // keep for the generic bar row
-          otherRangeBars.push(bar);
-        }
+
+if (group === 'Time periods') {
+  const xStart = Number.isFinite(startYearFloat) ? xForYear(startYearFloat) : null;
+  const xEnd = Number.isFinite(endYearFloat) ? xForYear(endYearFloat) : xStart;
+  if (xStart !== null) {
+    const xL = Math.min(xStart, xEnd);
+    const xR = Math.max(xStart, xEnd);
+    const barWidth = Math.max(4, xR - xL); // at least 4px wide
+    timePeriodBars.push({ ev, x: xL, w: barWidth, color: getGroupColor(group), title });
+  }
+  return  return; // skip normal rows
+
       }
       // do not process as a single point
       return;

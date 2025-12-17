@@ -788,8 +788,8 @@ function draw() {
   layoutSingleLabels(singles, { gap: gapForScale(), rows: rowsForScale(), y: 118, dy: 18, maxW: maxLabelWidthForScale(), leader: true });
 
   // ---- Dedicated "Time periods" band ----
-  const showTimePeriodsBand = isGroupVisible('Time periods') && timePeriodBars.length > 0;
-  if (showTimePeriodsBand) {
+  const showTimePeriodsBand = isGroupVisible('Time periods')
+    if (showTimePeriodsBand) {
     // band background
     ctx.save();
     ctx.fillStyle = '#f3f7ff';

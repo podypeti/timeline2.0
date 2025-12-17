@@ -970,5 +970,4 @@ function escapeHtml(s) {
 }
 function escapeAttr(s) { return escapeHtml(s); }
 
-// ===== Responsive =====
 

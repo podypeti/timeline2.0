@@ -57,13 +57,6 @@ body { margin: 0; background: var(--bg); font-family: Arial, sans-serif; color: 
 
 /* Keep using your existing .legend-panel/.legend-content styles */
 .legend-panel { /* already defined in your CSS */ }
-.legend-content { /* already defined; optionally constrain height */ }
-
-/* Optional: prevent a tall legend from making the toolbar too big */
-.legend-content {
-  max-height: 180px;             /* scroll if too many categories */
-  overflow-y: auto;
-}
 
 #timelineCanvas { width: 100%; height: 560px; display: block; }
 
@@ -78,7 +71,7 @@ body { margin: 0; background: var(--bg); font-family: Arial, sans-serif; color: 
 }
 .legendControls button.ghost:hover { background:#f3f3f3; }
 
-.legend { display: flex; flex-wrap: nowrap; overflow-x: auto; gap: 8px; padding: 0 10px; font-size: 0.9rem; }
+.legend { overflow-x: hidden;}
 .legend .chip {
   display: inline-flex; align-items: center; gap: 6px; background: var(--chip);
   border: 1px solid var(--chip-b); border-radius: 16px; padding: 4px 10px;
@@ -138,9 +131,6 @@ body { margin: 0; background: var(--bg); font-family: Arial, sans-serif; color: 
   content: "▲";
 }
 
-.legend-content {
-  padding: 8px;
-}
 
 #legendSearch {
   width: 100%;
@@ -212,23 +202,28 @@ body { margin: 0; background: var(--bg); font-family: Arial, sans-serif; color: 
   }
 }
 
-/* One-column list inside the drop-down */
+
+/* Inside the drop-down: stack items vertically, no own scrolling */
 .legend-content #legend {
   display: flex !important;
   flex-direction: column !important;
   flex-wrap: nowrap !important;
+  /* Ensure the inner list does NOT create its own scrollbars */
+  overflow: visible !important;
+  max-height: none !important;
+  max-width: 100% !important;
 }
 
 
-/* Each category chip spans full width */
+
+
+/* Make each chip fill the available width and avoid overflow */
 .legend-content .chip {
-  display: flex;
-  align-items: center;
   width: 100%;
-  justify-content: flex-start;
-  padding: 6px 10px;
-  border-radius: 16px;
+  box-sizing: border-box;
+  white-space: normal;            /* allow wrapping of long titles */
 }
+
 
 /* Tidy spacing for parts of a chip */
 .chip .swatch { margin-right: 8px; }
@@ -276,4 +271,18 @@ body { margin: 0; background: var(--bg); font-family: Arial, sans-serif; color: 
   transition: opacity .12s ease;
 }
 
+
+.legend-content {
+  max-height: 220px;          /* a little taller for comfort; adjust as you like */
+  overflow-y: auto;           /* only the outer container scrolls vertically */
+  overflow-x: hidden;         /* never show horizontal scrollbar on the container */
+}
+
+/* If icons or swatches push content wide, cap their size */
+.legend-content .chip .chip-icon { 
+  flex: 0 0 auto; 
+}
+.legend-content .chip .swatch { 
+  flex: 0 0 12px; 
+}
 

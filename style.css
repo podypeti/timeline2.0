@@ -214,10 +214,11 @@ body { margin: 0; background: var(--bg); font-family: Arial, sans-serif; color: 
 
 /* One-column list inside the drop-down */
 .legend-content #legend {
-  display: flex;
-  flex-direction: column;   /* stack vertically */
-  gap: 6px;
+  display: flex !important;
+  flex-direction: column !important;
+  flex-wrap: nowrap !important;
 }
+
 
 /* Each category chip spans full width */
 .legend-content .chip {

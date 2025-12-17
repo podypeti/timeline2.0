@@ -712,10 +712,6 @@ if (group === 'Time periods') {
     const barWidth = Math.max(4, xR - xL); // at least 4px wide
     timePeriodBars.push({ ev, x: xL, w: barWidth, color: getGroupColor(group), title });
   }
-  return  return; // skip normal rows
-
-      }
-      // do not process as a single point
       return;
     }
 

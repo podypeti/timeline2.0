@@ -904,6 +904,7 @@ canvas.addEventListener('touchstart', (e) => { if (e.touches.length === 1) { isD
 canvas.addEventListener('touchmove', (e) => { if (isDragging && e.touches.length === 1) { panX += (e.touches[0].clientX - dragStartX); dragStartX = e.touches[0].clientX; draw(); } }, { passive: true });
 canvas.addEventListener('touchend', () => { isDragging = false; });
 
+
 // Hover tooltips
 canvas.addEventListener('mousemove', (e) => {
   const rect = canvas.getBoundingClientRect();
@@ -928,6 +929,7 @@ canvas.addEventListener('mousemove', (e) => {
   }
   hideTooltip();
 });
+
 canvas.addEventListener('mouseleave', hideTooltip);
 
 // ===== Hit test =====
@@ -959,15 +961,12 @@ function setTooltip(text, x, y) {
   hoverTooltip.classList.add('show');
   hoverTooltip.setAttribute('aria-hidden', 'false');
 }
+
 function hideTooltip() {
   setTooltip('', 0, 0);
 }
 
-// (redefined) escape helpers
-function escapeHtml(s) {
-  const map = { '&':'&', '<':'<', '>':'>', '"':'"', "'":'&#39;' };
-  return String(s ?? '').replace(/[&<>"']/g, c => map[c]);
-}
-function escapeAttr(s) { return escapeHtml(s); }
+//// ===== Responsive =====
+
 
 

@@ -9,6 +9,12 @@ const MIN_ZOOM = 0.2;
 const MAX_ZOOM = 12000;
 const LABEL_ANCHOR_YEAR = -5000;
 const AVG_YEAR_DAYS = 365.2425;
+
+// ===== Band layout for "Time periods" =====
+const TP_BAND_Y = 232;       // top Y position of the band (in CSS pixels)
+const TP_BAND_H = 62;        // band height
+const TP_BAND_PAD_X = 6;     // horizontal padding before/after bars
+const TP_BAND_LABEL = 'Time periods'; // band label text
 // --- Clustering config ---
 const CLUSTER_BY = 'pixel';
 function clusterPxThreshold() {
@@ -651,8 +657,11 @@ const centerYear = yearForX(canvas.clientWidth / 2);
   // rows Y
   const rowYPoint = 110;
   const rowYBar = 180;
-
   const visiblePoints = [];
+  
+const timePeriodBars = []; // bars to draw in the dedicated band
+const otherRangeBars = []; // bars for any range group except "Time periods"
+
   events.forEach(ev => {
     const group = (ev['Group'] ?? '').trim();
     if (!isGroupVisible(group)) return;
@@ -676,18 +685,25 @@ const centerYear = yearForX(canvas.clientWidth / 2);
     }
     const title = ev['Headline'] ?? ev['Text'] ?? '';
     // ranges -> bar
-    if (Number.isFinite(startYearFloat) && Number.isFinite(endYearFloat)) {
-      const x1 = xForYear(startYearFloat), x2 = xForYear(endYearFloat);
-      const xL = Math.min(x1, x2), xR = Math.max(x1, x2);
-      if (xR > -50 && xL < W / dpr + 50) {
-        const col = getGroupColor(group);
-        ctx.fillStyle = col.replace('45%', '85%');
-        fillStrokeRoundedRect(xL, rowYBar, Math.max(4, xR - xL), 16, 8, ctx.fillStyle, '#00000022');
-        if (title) { ctx.fillStyle = '#111'; ctx.fillText(title, xR + 8, rowYBar); }
-        drawHitRects.push({ kind: 'bar', ev, x: xL, y: rowYBar, w: Math.max(4, xR - xL), h: 16 });
-      }
-      return;
+
+if (Number.isFinite(startYearFloat) && Number.isFinite(endYearFloat)) {
+  const x1 = xForYear(startYearFloat), x2 = xForYear(endYearFloat);
+  const xL = Math.min(x1, x2), xR = Math.max(x1, x2);
+
+  if (xR > -50 && xL < W / dpr + 50) {
+    const col = getGroupColor(group);
+    const barWidth = Math.max(4, xR - xL);
+    const bar = { ev, x: xL, w: barWidth, color: col, title, y: rowYBar };
+
+    if ((ev['Group'] ?? '').trim() === 'Time periods') {
+      // route into the dedicated band; the general row will not draw it
+      timePeriodBars.push(bar);
+    } else {
+      otherRangeBars.push(bar);
     }
+  }
+  }
+
     // single points
     if (Number.isFinite(startYearFloat)) {
       const x = xForYear(startYearFloat);
@@ -733,6 +749,56 @@ const centerYear = yearForX(canvas.clientWidth / 2);
   }
   pushCurrent();
 
+
+// ---- Dedicated "Time periods" band ----
+const showTimePeriodsBand = isGroupVisible('Time periods') && filterMode !== 'none';
+
+// Draw the band background if active
+if (showTimePeriodsBand) {
+  // soft background stripe
+  ctx.save();
+  ctx.fillStyle = '#f3f7ff';             // subtle light blue
+  ctx.strokeStyle = '#00000015';         // faint border
+  ctx.beginPath();
+  ctx.rect(0, TP_BAND_Y, W / dpr, TP_BAND_H);
+  ctx.fill();
+  ctx.stroke();
+
+  // band label on the left
+  ctx.fillStyle = '#335';
+  ctx.font = '12px sans-serif';
+  ctx.textBaseline = 'top';
+  ctx.fillText(TP_BAND_LABEL, 10, TP_BAND_Y + 6);
+  ctx.restore();
+
+  // draw only "Time periods" bars inside this band
+  timePeriodBars.forEach(bar => {
+    const bx = Math.max(TP_BAND_PAD_X, bar.x);
+    const bw = Math.max(4, bar.w - TP_BAND_PAD_X * 2);
+    const by = TP_BAND_Y + Math.floor(TP_BAND_H / 2) - 8; // vertical center of band
+
+    // lighter fill variant of the group color
+    const fillCol = bar.color.replace('45%', '85%'); // hsl(..., 65%, 85%) from getGroupColor
+    fillStrokeRoundedRect(bx, by, bw, 16, 8, fillCol, '#00000022');
+
+    if (bar.title) { ctx.fillStyle = '#111'; ctx.fillText(bar.title, bx + bw + 8, by); }
+
+    drawHitRects.push({ kind: 'bar', ev: bar.ev, x: bx, y: by, w: bw, h: 16 });
+  });
+}
+  
+// ---- Generic range bars row (non-"Time periods") ----
+otherRangeBars.forEach(bar => {
+  const fillCol = bar.color.replace('45%', '85%');
+  fillStrokeRoundedRect(bar.x, rowYBar, bar.w, 16, 8, fillCol, '#00000022');
+  if (bar.title) { 
+    ctx.fillStyle = '#111'; ctx.fillText(bar.title, bar.x + bar.w + 8, rowYBar); 
+    }
+  drawHitRects.push({ 
+    kind: 'bar', ev: bar.ev, x: bar.x, y: rowYBar, w: bar.w, h:   drawHitRects.push({
+      kind: 'bar', ev: bar.ev, x: bar.x, y: rowYBar, w: bar.w, h: 16 
+    });
+   })}
   // draw clusters
   ctx.textBaseline = 'top';
   ctx.font = '14px sans-serif';
@@ -901,3 +967,8 @@ function escapeAttr(s) { return escapeHtml(s); }
 
 // ===== Responsive =====
 window.addEventListener('resize', () => { draw(); })
+
+const showTimePeriodsBand =
+   filterMode !== 'none'
+     && activeGroups.has('Time periods')
+

@@ -24,7 +24,8 @@ body { margin: 0; background: var(--bg); font-family: Arial, sans-serif; color: 
   background: rgba(255,255,255,0.92);
   border-bottom: 1px solid #0001;
   box-shadow: 0 2px 8px var(--shadow);
-  z-index: 5;                    /* above canvas, below details panel (z=20) */
+  z-index: 5;                  
+ overflow: visible;
 }
 
 /* Push canvas down so the toolbar doesn't overlap its top */
@@ -55,8 +56,6 @@ body { margin: 0; background: var(--bg); font-family: Arial, sans-serif; color: 
   flex: 1;
 }
 
-/* Keep using your existing .legend-panel/.legend-content styles */
-.legend-panel { /* already defined in your CSS */ }
 
 #timelineCanvas { width: 100%; height: 560px; display: block; }
 
@@ -111,6 +110,8 @@ body { margin: 0; background: var(--bg); font-family: Arial, sans-serif; color: 
   box-shadow: 0 2px 6px rgba(0,0,0,0.08);
   max-width: 280px;
   font-family: sans-serif;
+    position: relative;  
+  display: inline-block; 
 }
 
 .legend-panel summary {
@@ -119,6 +120,10 @@ body { margin: 0; background: var(--bg); font-family: Arial, sans-serif; color: 
   padding: 10px;
   cursor: pointer;
   list-style: none;
+ display: flex;                 
+  align-items: center;
+  gap: 8px;
+  margin: 0;
 }
 
 .legend-panel summary::after {
@@ -252,8 +257,6 @@ body { margin: 0; background: var(--bg); font-family: Arial, sans-serif; color: 
 
 /* On small screens, reserve a bit more room so Reset never overlaps zooms */
 @media (max-width: 480px) {
-  .timelineToolbar { padding-right: 140px; }
-}
 
 /* ===== Hover Tooltip ===== */
 .hoverTooltip {
@@ -273,9 +276,18 @@ body { margin: 0; background: var(--bg); font-family: Arial, sans-serif; color: 
 
 
 .legend-content {
-  max-height: 220px;          /* a little taller for comfort; adjust as you like */
-  overflow-y: auto;           /* only the outer container scrolls vertically */
-  overflow-x: hidden;         /* never show horizontal scrollbar on the container */
+position: absolute;
+  top: calc(100% + 6px);           
+  left: 0;
+  z-index: 30;                     
+  width: 280px;       
+  overflow-y: auto;           
+  overflow-x: hidden;   
+background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.18);
+  padding: 8px;
 }
 
 /* If icons or swatches push content wide, cap their size */

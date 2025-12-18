@@ -1,19 +1,15 @@
 
 <!doctype html>
-<html lang=
+<html lang="en">
 <head>
   <meta charset="utf-8" />
   <title>History Timeline</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <!-- Your stylesheet -->
-  <link rel="stylesheet" href="style.css?v=6-patch2">
-</head>
-<body>
-
-  <div id="timelineContainer">
+  <link rel="stylesheet" href="style.css?v=6-patch2imelineContainer">
     <!-- Toolbar sitting over the canvas -->
     <div class="timelineToolbar">
-      <!-- Legend dropdown -->
+      <!-- Legend dropdown (we will control with JS popover) -->
       <details class="legend-panel">
         <summary>Categories</summary>
         <div class="legend-content">
@@ -46,94 +42,95 @@
     <div id="detailsContent"></div>
   </div>
 
-<!-- Hover tooltip (hidden by default) -->
-<div id="hoverTooltip" class="hoverTooltip" role="tooltip" aria-hidden="true"></div>
+  <!-- Hover tooltip (hidden by default) -->
+  <div id="hoverTooltip" class="hoverTooltip" role="tooltip" aria-hidden="true"></div>
 
   <!-- Load timeline script first -->
-  <script src=timeline.js?v=6-patch5></script>
+  timeline.js?v=6-patch5</script>
 
   <!-- Then run the bootstrap AFTER DOM is ready -->
- 
-<script defer>
-  document.addEventListener('DOMContentLoaded', async () => {
-    try {
-      const rows = await loadCsv('timeline-data.csv');
-      window.events = rows;              // for debugging/visibility
-      if (typeof events !== 'undefined') // update the internal array draw() uses
-        events = rows;
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      try {
+        const rows = await loadCsv('timeline-data.csv');
+        window.events = rows;              // for debugging/visibility
+        if (typeof events !== 'undefined') // update the internal array draw() uses
+          events = rows;
 
-      buildLegend();
-      initScaleAndPan();
-      draw();
-    } catch (err) {
-      console.error('[timeline] failed to load CSV', err);
-      // ... your optional details notice ...
+        buildLegend();
+        initScaleAndPan();
+        draw();
+      } catch (err) {
+        console.error('[timeline] failed to load CSV', err);
+        // You can show a notice in detailsContent if desired
+      }
+    });
+  </script>
+
+  <!-- Popover controller for Categories (fixed overlay; works on Edge and Android Chrome) -->
+  <script>
+  (function () {
+    const panel   = document.querySelector('.legend-panel');
+    if (!panel) return;
+
+    const summary = panel.querySelector('summary');
+    const content = panel.querySelector('.legend-content');
+    if (!summary || !content) return;
+
+    function positionPopover() {
+      if (!content.classList.contains('popover-show')) return;
+      const rect = summary.getBoundingClientRect();
+      const pad  = 6; // small vertical gap between summary and popover
+      const left = Math.round(rect.left);
+      const top  = Math.round(rect.bottom + pad);
+      content.style.left = `${left}px`;
+      content.style.top  = `${top}px`;
     }
-  });
-</script>
 
+    function showPopover() {
+      content.classList.add('popover-show');
+      positionPopover();
+    }
+    function hidePopover() {
+      content.classList.remove('popover-show');
+      // send off-screen to avoid accidental overlap
+      content.style.left = '-9999px';
+      content.style.top  = '-9999px';
+    }
 
-  
-<script>
+    // Prevent native <details> toggle; control ourselves.
+    function toggleHandler(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (content.classList.contains('popover-show')) hidePopover();
+      else showPopover();
+    }
 
-(function () {
-  const panel   = document.querySelector('.legend-panel');
-  if (!panel) return;
+    // Use pointerdown for touch + mouse (works on Android Chrome)
+    summary.addEventListener('pointerdown', toggleHandler);
+    // Also prevent default click toggling of <details>
+    summary.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); });
 
-  const summary = panel.querySelector('summary');
-  const content = panel.querySelector('.legend-content');
-  if (!summary || !content) return;
+    // Re-anchor on scroll/resize
+    const reposition = () => { positionPopover(); };
+    window.addEventListener('scroll', reposition, { passive: true });
+    window.addEventListener('resize', reposition);
 
-  function positionPopover() {
-    if (!content.classList.contains('popover-show')) return;
+    // Close when clicking outside the panel or the popover
+    document.addEventListener('pointerdown', (e) => {
+      if (!content.classList.contains('popover-show')) return;
+      const inside = panel.contains(e.target) || content.contains(e.target);
+      if (!inside) hidePopover();  // ✅ fixed: removed stray "hide"
+    });
 
-    const rect = summary.getBoundingClientRect();
-    const pad  = 6; // small vertical gap between summary and popover
-    const left = Math.round(rect.left);
-    const top  = Math.round(rect.bottom + pad);
-
-    content.style.left = `${left}px`;
-    content.style.top  = `${top}px`;
-  }
-
-  function showPopover() {
-    content.classList.add('popover-show');
-    positionPopover();
-  }
-  function hidePopover() {
-    content.classList.remove('popover-show');
-    // send off-screen to avoid accidental overlap
-    content.style.left = '-9999px';
-    content.style.top  = '-9999px';
-  }
-
-  // Prevent native <details> toggle; control ourselves.
-  function toggleHandler(e) {
-    e.preventDefault();
-    e.stopPropagation();
-    if (content.classList.contains('popover-show')) hidePopover();
-    else showPopover();
-  }
-
-  // Use pointerdown for touch + mouse (works on Android Chrome)
-  summary.addEventListener('pointerdown', toggleHandler);
-  // Also prevent default click toggling of <details>
-  summary.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); });
-
-  // Re-anchor on scroll/resize
-  const reposition = () => { positionPopover(); };
-  window.addEventListener('scroll', reposition, { passive: true });
-  window.addEventListener('resize', reposition);
-
-  // Close when clicking outside the panel or the popover
-  document.addEventListener('pointerdown', (e) => {
-    if (!content.classList.contains('popover-show')) return;
-    const inside = panel.contains(e.target) || content.contains(e.target);
-    if (!inside) hide   ; if (!inside) hidePopover();
-  });
-})();
-
-</script>
+    // Optional: close on Escape
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && content.classList.contains('popover-show')) {
+        hidePopover();
+      }
+       });
+  })();
+  </script>
 
 </body>
-</html>
+

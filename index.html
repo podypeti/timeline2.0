@@ -129,7 +129,7 @@
   document.addEventListener('pointerdown', (e) => {
     if (!content.classList.contains('popover-show')) return;
     const inside = panel.contains(e.target) || content.contains(e.target);
-    if (!inside) hide    if (!inside) hidePopover();
+    if (!inside) hide   ; if (!inside) hidePopover();
   });
 })();
 

@@ -12,22 +12,6 @@ body { margin: 0; background: var(--bg); font-family: Arial, sans-serif; color: 
 }
 
 /* Overlay toolbar */
-.timelineToolbar {
-  position: absolute;            /* sits on top of canvas */
-  top: 0;
-  left: 0;
-  right: 0;
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  padding: 8px 10px;
-  background: rgba(255,255,255,0.92);
-  border-bottom: 1px solid #0001;
-  box-shadow: 0 2px 8px var(--shadow);
-  z-index: 5;                  
- overflow: visible;
-}
-
 /* Push canvas down so the toolbar doesn't overlap its top */
 #timelineCanvas {
   width: 100%;
@@ -103,29 +87,9 @@ body { margin: 0; background: var(--bg); font-family: Arial, sans-serif; color: 
 .panValue { min-width: 80px; text-align: right; font-weight: 600; color: #111; }
 
 
-.legend-panel {
-  border: 1px solid #ddd;
-  border-radius: 10px;
-  background: #fff;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
-  max-width: 280px;
-  font-family: sans-serif;
-    position: relative;  
-  display: inline-block; 
-  vertical-align: top; 
-}
 
-.legend-panel summary {
-  font-weight: 600;
-  font-size: 15px;
-  padding: 10px;
-  cursor: pointer;
-  list-style: none;
-  display: inline-flex;                 
-  align-items: center;
-  gap: 8px;
-  margin: 0;
-}
+
+
 
 .legend-panel summary::after {
   content: "▼";
@@ -136,14 +100,6 @@ body { margin: 0; background: var(--bg); font-family: Arial, sans-serif; color: 
 .legend-panel[open] summary::after {
   content: "▲";
 }
-
-.legend-panel:not([open]) .legend-content {
-  display: none;
-}
-
-
-legend-panel summary::-webkit-details-marker { display: none; }
-.legend-panel summary::marker { content: ""; }
 
 #legendSearch {
   width: 100%;
@@ -217,25 +173,8 @@ legend-panel summary::-webkit-details-marker { display: none; }
 
 
 /* Inside the drop-down: stack items vertically, no own scrolling */
-.legend-content #legend {
-  display: flex !important;
-  flex-direction: column !important;
-  flex-wrap: nowrap !important;
-  /* Ensure the inner list does NOT create its own scrollbars */
-  overflow: visible !important;
-  max-height: none !important;
-  max-width: 100% !important;
-}
-
-
-
-
 /* Make each chip fill the available width and avoid overflow */
-.legend-content .chip {
-  width: 100%;
-  box-sizing: border-box;
-  white-space: normal;            /* allow wrapping of long titles */
-}
+
 
 
 /* Tidy spacing for parts of a chip */
@@ -283,20 +222,7 @@ legend-panel summary::-webkit-details-marker { display: none; }
 }
 
 
-.legend-content {
-position: fixed;
- top: -9999px;          
-  left: -9999px;
-  z-index: 2000;                     
-  width: 280px;       
-  overflow-y: auto;           
-  overflow-x: hidden;   
-background: #fff;
-  border: 1px solid #ddd;
-  border-radius: 10px;
-  box-shadow: 0 8px 24px rgba(0,0,0,.18);
-  padding: 8px;
-}
+
 
 /* If icons or swatches push content wide, cap their size */
 .legend-content .chip .chip-icon { 
@@ -305,4 +231,79 @@ background: #fff;
 .legend-content .chip .swatch { 
   flex: 0 0 12px; 
 }
+.legend-panel {
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+  max-width: 280px;
+  font-family: sans-serif;
+    position: relative;  
+  display: inline-block; 
+  vertical-align: top; 
+}
 
+  .legend-panel summary {
+font-weight: 600;
+  font-size: 15px;
+  padding: 10px;
+  cursor: pointer;
+  list-style: none;
+  display: inline-flex;                 
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+.legend-panel summary::-webkit-details-marker { display: none; }
+.legend-panel summary::marker { display: none;  }
+
+.legend-content {
+  position: fixed;
+  top: -9999px;          
+  left: -9999px;
+  z-index: 2000;                     
+  width: 280px;       
+  overflow-y: auto;           
+  overflow-x: hidden;   
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.18);
+  padding: 8px;
+  display: none;   
+}
+  
+.legend-content.popover-show {
+  display: block;
+}
+  .legend-panel[open] .legend-content { display: block; }
+
+  .legend-content #legend {
+    display: flex !important;
+    flex-direction: column !important;
+    flex-wrap: nowrap !important;
+    /* Ensure the inner list does NOT create its own scrollbars */
+    overflow: visible !important;
+    max-height: none !important;
+    max-width: 100% !important;
+}
+.legend-content .chip {
+  width: 100%;
+  box-sizing: border-box;
+  white-space: normal;            
+}
+  .timelineToolbar {
+  position: absolute;          
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 10px;
+  background: rgba(255,255,255,0.92);
+  border-bottom: 1px solid #0001;
+  box-shadow: 0 2px 8px var(--shadow);
+  z-index: 5;                  
+ overflow: visible;
+}

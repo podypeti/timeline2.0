@@ -75,5 +75,58 @@
   });
 </script>
 
+
+  
+<script>
+(function () {
+  const panel   = document.querySelector('.legend-panel');
+  if (!panel) return;
+
+  const summary = panel.querySelector('summary');
+  const content = panel.querySelector('.legend-content');
+  if (!summary || !content) return;
+
+  function positionPopover() {
+    if (!panel.open) return;                // only when open
+    const rect = summary.getBoundingClientRect();
+
+    // Place the popover just below the summary, aligned left
+    const pad = 6; // small gap
+    const popLeft = Math.round(rect.left);
+    const popTop  = Math.round(rect.bottom + pad);
+
+    content.style.left    = `${popLeft}px`;
+    content.style.top     = `${popTop}px`;
+    content.style.display = 'block';        // ensure visible
+  }
+
+  // Use the details 'toggle' event to position when opened, hide when closed
+  panel.addEventListener('toggle', () => {
+    if (panel.open) {
+      positionPopover();
+    } else {
+      content.style.display = 'none';
+    }
+  });
+
+  // Reposition on scroll/resize to keep the popover anchored
+  function onViewportChange() {
+    if (panel.open) positionPopover();
+  }
+  window.addEventListener('scroll', onViewportChange, { passive: true });
+  window.addEventListener('resize', onViewportChange);
+
+  // Optional: close when clicking outside the panel or the popover
+  document.addEventListener('click', (e) => {
+    if (!panel.open) return;
+    const clickedInside = panel.contains(e.target) || content.contains(e.target);
+    if (!clickedInside) {
+      panel.open = false;
+      content.style.display =      content.style.display = 'none';
+    }
+  });
+});
+</script>
+
 </body>
 </html>

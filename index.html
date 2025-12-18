@@ -6,10 +6,14 @@
   <title>History Timeline</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <!-- Styles -->
-  <link rel="stylesheet" href="style.css?v=iv id="timelineContainer">
+  style.css?v=6-patch5
+</head>
+<body>
+
+  <div id="timelineContainer">
     <!-- Toolbar sitting over the canvas -->
     <div class="timelineToolbar">
-      <!-- Legend drop-down (we control this via JS as a fixed popover) -->
+      <!-- Legend drop-down (controlled via JS as a fixed popover) -->
       <details class="legend-panel">
         <summary>Categories</summary>
         <div class="legend-content">
@@ -45,30 +49,53 @@
   <!-- Hover tooltip (hidden by default) -->
   <div id="hoverTooltip" class="hoverTooltip" role="tooltip" aria-hidden="true"></div>
 
-  <!-- Load timeline logic -->
+  <!-- Load timeline logic FIRST (must come before bootstrap) -->
   timeline.js?v=6-patch5</script>
 
-  <!-- Bootstrap: timing-safe, works if DOM already ready -->
+  <!-- Bootstrap: runs after DOM is ready; checks functions exist before calling -->
   <script>
   (function() {
     async function boot() {
-      try {
-        // Load CSV (works when served over http/https; may fail from file://)
-        const rows = await loadCsv('timeline-data.csv');
-        window.events = rows;        // for debugging
-        if (typeof events !== 'undefined') {
-          events = rows;             // update internal array used by draw()
-        }
-      } catch (err) {
-        console.error('[timeline] failed to load CSV', err);
-        // Continue initialisation so the UI appears even without CSV data
+      // Defensive checks: verify the functions were loaded from timeline.js
+      if (typeof buildLegend !== 'function') {
+        console.error('[timeline] buildLegend is not defined — did timeline.js load? Check path and network.');
+        return;
       }
-      buildLegend();
-      initScaleAndPan();
-      draw();
+      if (typeof initScaleAndPan !== 'function') {
+        console.error('[timeline] initScaleAndPan is not defined — did timeline.js load?');
+        return;
+      }
+      if (typeof draw !== 'function') {
+        console.error('[timeline] draw is not defined — did timeline.js load?');
+        return;
+      }
+
+      // Try to load CSV if loadCsv exists; otherwise proceed with empty events
+      if (typeof loadCsv === 'function') {
+        try {
+          const rows = await loadCsv('timeline-data.csv'); // served via http/https (file:// may block fetch)
+          window.events = rows;                // expose for debugging
+          // timeline.js declares `let events = []`; update it for rendering
+          events = rows;
+        } catch (err) {
+          console.error('[timeline] failed to load CSV', err);
+          // Continue initialisation so the UI appears even without data
+        }
+      } else {
+        console.warn('[timeline] loadCsv() is not available — continuing without CSV');
+      }
+
+      // Initialise UI and first render
+      try {
+        buildLegend();
+        initScaleAndPan();
+        draw();
+      } catch (err) {
+        console.error('[timeline] initial render failed', err);
+      }
     }
 
-    // Run now if DOM is already ready; else wait for DOMContentLoaded
+    // Run now if DOM is already ready; else wait for DOMContentLoaded (once)
     if (document.readyState !== 'loading') {
       boot();
     } else {
@@ -138,7 +165,7 @@
 
     // Optional: close on Escape
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && content.classList.contains('popover-show')) {
+      if (e.key      if (e.key === 'Escape' && content.classList.contains('popover-show')) {
         hidePopover();
       }
     });

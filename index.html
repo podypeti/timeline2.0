@@ -75,6 +75,7 @@
 
   
 <script>
+
 (function () {
   const panel   = document.querySelector('.legend-panel');
   if (!panel) return;
@@ -84,45 +85,54 @@
   if (!summary || !content) return;
 
   function positionPopover() {
-    if (!panel.open) return;                // only when open
+    if (!content.classList.contains('popover-show')) return;
+
     const rect = summary.getBoundingClientRect();
+    const pad  = 6; // small vertical gap between summary and popover
+    const left = Math.round(rect.left);
+    const top  = Math.round(rect.bottom + pad);
 
-    // Place the popover just below the summary, aligned left
-    const pad = 6; // small gap
-    const popLeft = Math.round(rect.left);
-    const popTop  = Math.round(rect.bottom + pad);
-
-    content.style.left    = `${popLeft}px`;
-    content.style.top     = `${popTop}px`;
-    content.style.display = 'block';        // ensure visible
+    content.style.left = `${left}px`;
+    content.style.top  = `${top}px`;
   }
 
-  // Use the details 'toggle' event to position when opened, hide when closed
-  panel.addEventListener('toggle', () => {
-    if (panel.open) {
-      positionPopover();
-    } else {
-      content.style.display = 'none';
-    }
-  });
-
-  // Reposition on scroll/resize to keep the popover anchored
-  function onViewportChange() {
-    if (panel.open) positionPopover();
+  function showPopover() {
+    content.classList.add('popover-show');
+    positionPopover();
   }
-  window.addEventListener('scroll', onViewportChange, { passive: true });
-  window.addEventListener('resize', onViewportChange);
+  function hidePopover() {
+    content.classList.remove('popover-show');
+    // send off-screen to avoid accidental overlap
+    content.style.left = '-9999px';
+    content.style.top  = '-9999px';
+  }
 
-  // Optional: close when clicking outside the panel or the popover
-  document.addEventListener('click', (e) => {
-    if (!panel.open) return;
-    const clickedInside = panel.contains(e.target) || content.contains(e.target);
-    if (!clickedInside) {
-      panel.open = false;
-      content.style.display =      content.style.display = 'none';
-    }
+  // Prevent native <details> toggle; control ourselves.
+  function toggleHandler(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (content.classList.contains('popover-show')) hidePopover();
+    else showPopover();
+  }
+
+  // Use pointerdown for touch + mouse (works on Android Chrome)
+  summary.addEventListener('pointerdown', toggleHandler);
+  // Also prevent default click toggling of <details>
+  summary.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); });
+
+  // Re-anchor on scroll/resize
+  const reposition = () => { positionPopover(); };
+  window.addEventListener('scroll', reposition, { passive: true });
+  window.addEventListener('resize', reposition);
+
+  // Close when clicking outside the panel or the popover
+  document.addEventListener('pointerdown', (e) => {
+    if (!content.classList.contains('popover-show')) return;
+    const inside = panel.contains(e.target) || content.contains(e.target);
+    if (!inside) hide    if (!inside) hidePopover();
   });
-});
+})();
+
 </script>
 
 </body>

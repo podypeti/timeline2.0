@@ -1,26 +1,63 @@
 
-:root { --bg:#f7f7f7; --ink:#000; --chip:#fff; --chip-b:#0001; --shadow:#0003; --accent:#222; }
+/* ===========================
+   Base variables & document
+   =========================== */
+:root {
+  --bg:#f7f7f7;
+  --ink:#000;
+  --chip:#fff;
+  --chip-b:#0001;
+  --shadow:#0003;
+  --accent:#222;
+}
 
 html, body { height:100%; }
-body { margin: 0; background: var(--bg); font-family: Arial, sans-serif; color: var(--ink); }
+body {
+  margin: 0;
+  background: var(--bg);
+  font-family: Arial, sans-serif;
+  color: var(--ink);
+}
 
-
+/* ===========================
+   Layout containers
+   =========================== */
 #timelineContainer {
   position: relative;
   width: 100%;
   overflow: hidden;
 }
 
-/* Overlay toolbar */
+/* Toolbar sitting over the canvas */
+.timelineToolbar {
+  position: absolute;      /* sits above the canvas */
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 10px;
+  background: rgba(255,255,255,0.92);
+  border-bottom: 1px solid #0001;
+  box-shadow: 0 2px 8px var(--shadow);
+  z-index: 5;              /* above canvas */
+  overflow: visible;       /* allow popover to render above toolbar */
+}
+
 /* Push canvas down so the toolbar doesn't overlap its top */
 #timelineCanvas {
   width: 100%;
   height: 560px;
   display: block;
-  margin-top: 64px;              /* adjust if your toolbar height changes */
+  margin-top: 64px; /* adjust if your toolbar height changes */
 }
 
-/* Right side: zoom buttons group */
+/* ===========================
+   Zoom controls & spacing
+   =========================== */
+.toolbarSpacer { flex: 1; }
+
 .zoomGroup button.ghost {
   padding: 6px 12px;
   font-size: .9rem;
@@ -31,76 +68,109 @@ body { margin: 0; background: var(--bg); font-family: Arial, sans-serif; color: 
   cursor: pointer;
   box-shadow: 0 1px 2px var(--shadow);
 }
-.zoomGroup button.ghost:hover {
-  background: #f3f3f3;
-}
+.zoomGroup button.ghost:hover { background: #f3f3f3; }
 
-/* Fills the middle space between legend and zoom buttons */
-.toolbarSpacer {
-  flex: 1;
-}
+/* ===========================
+   Legend (toolbar & popover)
+   =========================== */
 
+/* Toolbar legend strip (if used elsewhere; keep overflow hidden by default) */
+.legend { overflow-x: hidden; }
 
-#timelineCanvas { width: 100%; height: 560px; display: block; }
-
-.legendControls { max-width: 1100px; margin: 4px auto 2px; padding: 0 10px; }
-.legendControls .inner { display: flex; align-items: center; gap: 10px; }
-.legendControls .legendTitle { display: none; } /* hide "Legend" label */
-.legendControls .spacer { flex: 1; }
-
-.legendControls button.ghost {
-  padding: 6px 12px; font-size: .9rem; border: 1px solid #0002; background: #fff; color:#111;
-  border-radius: 8px; cursor: pointer; box-shadow: 0 1px 2px var(--shadow);
-}
-.legendControls button.ghost:hover { background:#f3f3f3; }
-
-.legend { overflow-x: hidden;}
+/* Chip visual */
 .legend .chip {
-  display: inline-flex; align-items: center; gap: 6px; background: var(--chip);
-  border: 1px solid var(--chip-b); border-radius: 16px; padding: 4px 10px;
-  box-shadow: 0 1px 2px var(--shadow); cursor: pointer; user-select: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--chip);
+  border: 1px solid var(--chip-b);
+  border-radius: 16px;
+  padding: 4px 10px;
+  box-shadow: 0 1px 2px var(--shadow);
+  cursor: pointer;
+  user-select: none;
 }
-.legend .swatch { width: 12px; height: 12px; border-radius: 50%; border: 1px solid #0003; }
-.legend .chip.inactive { opacity: .45; filter: grayscale(.2) saturate(.8); text-decoration: line-through; }
-
-.details {
-  position: fixed; right: 12px; top: 70px; width: min(360px, 92vw); max-height: calc(100vh - 100px);
-  overflow: auto; background: #fff; border: 1px solid #0001; border-radius: 10px;
-  box-shadow: 0 10px 24px var(--shadow); padding: 14px 16px 18px; z-index: 20; /* above slider */
+.legend .chip.inactive {
+  opacity: .45;
+  filter: grayscale(.2) saturate(.8);
+  text-decoration: line-through;
 }
-.details.hidden { display: none; }
-.details .close {
-  position: absolute; top: 6px; right: 8px; width: 28px; height: 28px; border: none;
-  border-radius: 50%; background: #f2f2f2; cursor: pointer; font-size: 18px; line-height: 28px;
+.legend .swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 1px solid #0003;
 }
-.details h3 { margin: 4px 0 8px; font-size: 1.05rem; }
-.details .meta { color: #555; font-size: 0.9rem; margin-bottom: 10px; }
-.details .media img { width: 100%; height: auto; border-radius: 8px; box-shadow: 0 2px 8px #0002; }
 
-.panSliderBar {
-  position: fixed; left: 0; right: 0; bottom: 0; padding: 10px 16px; background: rgba(255,255,255,.92);
-  border-top: 1px solid #0002; box-shadow: 0 -6px 18px var(--shadow);
-  display: flex; align-items: center; gap: 12px; z-index: 15;
+/* Legend panel (anchor + heading) */
+.legend-panel {
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+  max-width: 280px;
+  font-family: sans-serif;
+
+  /* anchor behavior */
+  position: relative;
+  display: inline-block;
+  vertical-align: top;
 }
-.panSliderBar .panLabel { font-size: .9rem; }
-#panSlider { flex: 1; height: 24px; }
-.panValue { min-width: 80px; text-align: right; font-weight: 600; color: #111; }
 
+.legend-panel summary {
+  font-weight: 600;
+  font-size: 15px;
+  padding: 10px;
+  cursor: pointer;
+  list-style: none;
 
-
-
-
-
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+/* down/up chevron for visual hint (optional, not functional) */
 .legend-panel summary::after {
   content: "▼";
   float: right;
   font-size: 12px;
 }
+.legend-panel[open] summary::after { content: "▲"; }
 
-.legend-panel[open] summary::after {
-  content: "▲";
+/* Remove native markers to avoid layout quirks */
+.legend-panel summary::-webkit-details-marker { display: none; }
+.legend-panel summary::marker { display: none; }
+
+/* Popover panel (fixed overlay; controlled by JS via .popover-show) */
+.legend-content {
+  position: fixed;    /* detach from flow to prevent toolbar reflow */
+  top: -9999px;       /* off-screen until positioned by JS */
+  left: -9999px;
+  z-index: 2000;
+  width: 280px;
+
+  max-height: 240px;
+  overflow-y: auto;
+  overflow-x: hidden;
+
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.18);
+  padding: 8px;
+
+  display: none;      /* shown only when .popover-show is toggled */
 }
 
+/* Shown by JS controller */
+.legend-content.popover-show { display: block; }
+
+/* Neutralize native <details open> since we control the panel ourselves */
+.legend-panel[open] .legend-content {
+  display: none !important;
+}
+
+/* One-column list inside the popover */
 #legendSearch {
   width: 100%;
   padding: 6px 8px;
@@ -109,103 +179,86 @@ body { margin: 0; background: var(--bg); font-family: Arial, sans-serif; color: 
   margin-bottom: 8px;
   font-size: 14px;
 }
+.legend-content #legend {
+  display: flex !important;
+  flex-direction: column !important;
+  flex-wrap: nowrap !important;
 
-.chip-row {
-  display: flex;
-  gap: 6px;
-  margin-bottom: 8px;
+  /* Ensure the inner list does NOT create its own scrollbars */
+  overflow: visible !important;
+  max-height: none !important;
+  max-width: 100% !important;
 }
-
-.chip {
-  display: inline-flex;
-  align-items: center;
-  padding: 4px 10px;
-  font-size: 13px;
-  border-radius: 16px;
-  background: #f7f7f7;
-  border: 1px solid #ddd;
-  cursor: pointer;
-  transition: background 0.2s;
+.legend-content .chip {
+  width: 100%;
+  box-sizing: border-box;
+  white-space: normal;   /* wrap long labels */
 }
-
-.chip:hover {
-  background: #eaeaea;
-}
-
-.chip.inactive {
-  opacity: 0.5;
-}
-
-.swatch {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  margin-right: 6px;
-}
-
-.swatch.green { background: #2c7; }
-.swatch.red { background: #c33; }
-
-#legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  max-height: 180px;
-  overflow-y: auto;
-}
-
-/* Toolbar search field (events) */
-.toolbarSearch {
-  width: clamp(220px, 28vw, 360px);
-  padding: 6px 10px;
-  border-radius: 8px;
-  border: 1px solid #ccc;
-  background: #fff;
-  font-size: 14px;
-  box-shadow: 0 1px 2px var(--shadow);
-}
-
-@media (max-width: 700px) {
-  .toolbarSearch {
-    width: min(54vw, 280px);
-  }
-}
-
-
-/* Inside the drop-down: stack items vertically, no own scrolling */
-/* Make each chip fill the available width and avoid overflow */
-
-
-
-/* Tidy spacing for parts of a chip */
 .chip .swatch { margin-right: 8px; }
 .chip .chip-icon { margin-right: 8px; }
 
-
-/* Floating Reset button in top-right */
-.resetFloating {
+/* ===========================
+   Event details panel
+   =========================== */
+.details {
   position: fixed;
-  top: 10px;
   right: 12px;
-  z-index: 30;                 /* above toolbar/details */
-  padding: 6px 12px;
-  font-size: .9rem;
-  border: 1px solid #0002;
-  border-radius: 8px;
+  top: 70px;
+  width: min(360px, 92vw);
+  max-height: calc(100vh - 100px);
+  overflow: auto;
   background: #fff;
-  color: #111;
-  box-shadow: 0 2px 8px var(--shadow);
-  cursor: pointer;
+  border: 1px solid #0001;
+  border-radius: 10px;
+  box-shadow: 0 10px 24px var(--shadow);
+  padding: 14px 16px 18px;
+  z-index: 20; /* above canvas & toolbar */
 }
-.resetFloating:hover { background: #f3f3f3; }
+.details.hidden { display: none; }
+.details .close {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 50%;
+  background: #f2f2f2;
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 28px;
+}
+.details h3 { margin: 4px 0 8px; font-size: 1.05rem; }
+.details .meta { color: #555; font-size: 0.9rem; margin-bottom: 10px; }
+.details .media img {
+  width: 100%;
+  height: auto;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px #0002;
+}
 
-/* Toolbar sits under the fixed Reset: give it right padding so nothing is under Reset */
+/* ===========================
+   Bottom slider bar (if used)
+   =========================== */
+.panSliderBar {
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  padding: 10px 16px;
+  background: rgba(255,255,255,.92);
+  border-top: 1px solid #0002;
+  box-shadow: 0 -6px 18px var(--shadow);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  z-index: 15;
+}
+.panSliderBar .panLabel { font-size: .9rem; }
+#panSlider { flex: 1; height: 24px; }
+.panValue { min-width: 80px; text-align: right; font-weight: 600; color: #111; }
 
-
-/* On small screens, reserve a bit more room so Reset never overlaps zooms */
-@media (max-width: 480px) {
-
-/* ===== Hover Tooltip ===== */
+/* ===========================
+   Hover tooltip
+   =========================== */
 .hoverTooltip {
   position: fixed;
   z-index: 40;
@@ -217,93 +270,49 @@ body { margin: 0; background: var(--bg); font-family: Arial, sans-serif; color: 
   border-radius: 6px;
   box-shadow: 0 6px 18px rgba(0,0,0,.22);
   transform: translate(-50%, -120%); /* sit above cursor */
-  opacity:   opacity: 0;
+  opacity: 0;                         /* default: hidden */
   transition: opacity .12s ease;
 }
+.hoverTooltip.show { opacity: 1; }
 
-
-
-
-/* If icons or swatches push content wide, cap their size */
-.legend-content .chip .chip-icon { 
-  flex: 0 0 auto; 
-}
-.legend-content .chip .swatch { 
-  flex: 0 0 12px; 
-}
-.legend-panel {
-  border: 1px solid #ddd;
-  border-radius: 10px;
+/* ===========================
+   Responsive
+   =========================== */
+.toolbarSearch {
+  width: clamp(220px, 28vw, 360px);
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
   background: #fff;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
-  max-width: 280px;
-  font-family: sans-serif;
-    position: relative;  
-  display: inline-block; 
-  vertical-align: top; 
+  font-size: 14px;
+  box-shadow: 0 1px 2px var(--shadow);
+}
+@media (max-width: 700px) {
+  .toolbarSearch {
+    width: min(54vw, 280px);
+  }
 }
 
-  .legend-panel summary {
-font-weight: 600;
-  font-size: 15px;
-  padding: 10px;
-  cursor: pointer;
-  list-style: none;
-  display: inline-flex;                 
-  align-items: center;
-  gap: 8px;
-  margin: 0;
+/* Small screens: (close properly; add overrides if needed) */
+@media (max-width: 480px) {
+  /* You can add tighter paddings, reduced max-heights, etc., here. */
 }
-.legend-panel summary::-webkit-details-marker { display: none; }
-.legend-panel summary::marker { display: none;  }
 
-.legend-content {
+/* ===========================
+   Optional: Floating reset button (if you keep it)
+   =========================== */
+.resetFloating {
   position: fixed;
-  top: -9999px;          
-  left: -9999px;
-  z-index: 2000;                     
-  width: 280px;       
-  overflow-y: auto;           
-  overflow-x: hidden;   
+  top: 10px;
+  right: 12px;
+  z-index: 30; /* above toolbar/details */
+  padding: 6px 12px;
+  font-size: .9rem;
+  border: 1px solid #0002;
+  border-radius: 8px;
   background: #fff;
-  border: 1px solid #ddd;
-  border-radius: 10px;
-  box-shadow: 0 8px 24px rgba(0,0,0,.18);
-  padding: 8px;
-  display: none;   
+  color: #111;
+  box-shadow: 0  box-shadow: 0 2px 8px var(--shadow);
+  cursor: pointer;
 }
-  
-.legend-content.popover-show {
-  display: block;
-}
-  .legend-panel[open] .legend-content { display: block; }
 
-  .legend-content #legend {
-    display: flex !important;
-    flex-direction: column !important;
-    flex-wrap: nowrap !important;
-    /* Ensure the inner list does NOT create its own scrollbars */
-    overflow: visible !important;
-    max-height: none !important;
-    max-width: 100% !important;
-}
-.legend-content .chip {
-  width: 100%;
-  box-sizing: border-box;
-  white-space: normal;            
-}
-  .timelineToolbar {
-  position: absolute;          
-  top: 0;
-  left: 0;
-  right: 0;
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  padding: 8px 10px;
-  background: rgba(255,255,255,0.92);
-  border-bottom: 1px solid #0001;
-  box-shadow: 0 2px 8px var(--shadow);
-  z-index: 5;                  
- overflow: visible;
-}

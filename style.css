@@ -112,6 +112,7 @@ body { margin: 0; background: var(--bg); font-family: Arial, sans-serif; color: 
   font-family: sans-serif;
     position: relative;  
   display: inline-block; 
+  vertical-align: top; 
 }
 
 .legend-panel summary {
@@ -120,7 +121,7 @@ body { margin: 0; background: var(--bg); font-family: Arial, sans-serif; color: 
   padding: 10px;
   cursor: pointer;
   list-style: none;
- display: flex;                 
+  display: inline-flex;                 
   align-items: center;
   gap: 8px;
   margin: 0;
@@ -136,6 +137,13 @@ body { margin: 0; background: var(--bg); font-family: Arial, sans-serif; color: 
   content: "▲";
 }
 
+.legend-panel:not([open]) .legend-content {
+  display: none;
+}
+
+
+legend-panel summary::-webkit-details-marker { display: none; }
+.legend-panel summary::marker { content: ""; }
 
 #legendSearch {
   width: 100%;
@@ -276,10 +284,10 @@ body { margin: 0; background: var(--bg); font-family: Arial, sans-serif; color: 
 
 
 .legend-content {
-position: absolute;
-  top: calc(100% + 6px);           
-  left: 0;
-  z-index: 30;                     
+position: fixed;
+ top: -9999px;          
+  left: -9999px;
+  z-index: 2000;                     
   width: 280px;       
   overflow-y: auto;           
   overflow-x: hidden;   

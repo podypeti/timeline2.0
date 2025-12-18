@@ -969,8 +969,6 @@ function resetAll() {
 
   draw();
 }
-const btnResetFloating = document.getElementById('resetZoomFloating');
-if (btnResetFloating) btnResetFloating.addEventListener('click', resetAll);
 
 function zoomIn(anchorX){ zoomTo(scale * 1.3, anchorX); }
 function zoomOut(anchorX){ zoomTo(scale / 1.3, anchorX); }

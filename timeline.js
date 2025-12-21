@@ -385,7 +385,6 @@ function showDetails(ev) {
   detailsContent.innerHTML = `
     <h3>${escapeHtml(headline)}</h3>
     <div class="meta">${escapeHtml(displayDate)}${ev['Type'] ? ' • ' + escapeHtml(ev['Type']) : ''}${ev['Group'] ? ' • ' + escapeHtml(ev['Group']) : ''}</div>
-    ${media ? <div class="media">${escapeAttr(media)}</div>}
     ${caption ? `<p><em>${escapeHtml(caption)}</em></p>` : ''}
     ${text ? `<p>${text}</p>` : ''}
     ${credit ? `<p class="meta">${escapeHtml(credit)}</p>` : ''}

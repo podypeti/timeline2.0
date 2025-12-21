@@ -1093,7 +1093,10 @@ function hideTooltip() {
 
 // ===== Responsive =====
 
-window.addEventListener('resize', () => { draw(); });
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('resize', () => { draw(); });
+
 
 
 

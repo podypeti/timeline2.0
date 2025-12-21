@@ -951,7 +951,7 @@ if (showTimePeriodsBand) {
   });
 
   // NOTE: We no longer place external labels or leaders in the band.
-  // Your hover tooltip & click-to-details still work via hit-test rects  // Your hover tooltip & click-to-details still work via hit-test rects above.
+// Hover tooltip & click-to
 
 
   // ---- Generic range bars row (non-"Time periods") ----

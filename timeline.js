@@ -1066,53 +1066,64 @@ function initScaleAndPan() {
 // ===== Responsive =====
 window.addEventListener('resize', () => { draw(); });
 
+
 function wireUi() {
-  // Zoom buttons
+  const canvas = document.getElementById('timelineCanvas');
+
+  // --- Zoom buttons ---
   const btnZoomIn  = document.getElementById('zoomIn');
   const btnZoomOut = document.getElementById('zoomOut');
   const btnReset   = document.getElementById('resetZoom');
 
-  if (btnZoomIn)  btnZoomIn.onclick  = () => zoomIn(document.getElementById('timelineCanvas').clientWidth / 2);
-  if (btnZoomOut) btnZoomOut.onclick = () => zoomOut(document.getElementById('timelineCanvas').clientWidth / 2);
+  if (btnZoomIn)  btnZoomIn.onclick  = () => zoomIn(canvas.clientWidth / 2);
+  if (btnZoomOut) btnZoomOut.onclick = () => zoomOut(canvas.clientWidth / 2);
   if (btnReset)   btnReset.onclick   = () => resetAll();
 
-  // Legend popover toggle (see CSS .legend-panel / .legend-content)
-  const legendPanel   = document.querySelector('.legend-panel');
-  const legendPopover = document.getElementById('legendPopover');
-
+  // --- Legend popover (Categories) ---
+  const legendPanel   = document.querySelector('.legend-panel');   // <details>
+  const legendPopover = document.getElementById('legendPopover');  // .legend-content
   if (legendPanel && legendPopover) {
-    // Position and show the popover under the summary
     legendPanel.addEventListener('click', (e) => {
+      // position popover right under the summary
       const rect = legendPanel.getBoundingClientRect();
       legendPopover.style.left = `${rect.left}px`;
       legendPopover.style.top  = `${rect.bottom + 4}px`;
       legendPopover.classList.toggle('popover-show');
+      // IMPORTANT: immediately collapse native <details> so CSS does not hide popover
+      legendPanel.open = false;
     });
 
-    // Click outside to close
+    // Click outside to close popover
     document.addEventListener('click', (e) => {
       const insidePanel   = legendPanel.contains(e.target);
       const insidePopover = legendPopover.contains(e.target);
       if (!insidePanel && !insidePopover) legendPopover.classList.remove('popover-show');
     });
   }
+
+  // --- Details close button (ensure it responds) ---
+  const detailsClose = document.getElementById('detailsClose');
+  if (detailsClose) detailsClose.onclick = hideDetails;
 }
+
 
 // ===== Startup =====
 
-
 document.addEventListener('DOMContentLoaded', async () => {
   initScaleAndPan();
+
   try {
     events = await loadCsv('timeline-data.csv?v=' + ASSET_VERSION);
     console.log('[diag] loaded events:', events.length);
   } catch (err) {
     console.error('[timeline] CSV load failed', err);
   }
-  buildLegend();   // builds chips inside #legend
-  wireUi();        // <— ensures buttons & popover are clickable
+
+  buildLegend();   // chips inside #legend
+  wireUi();        // <— attach all handlers AFTER DOM & chips exist
   draw();
 });
+
 
 
 

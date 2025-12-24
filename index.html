@@ -8,36 +8,38 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div id="timelineContainer">
-    <div class="timelineToolbar">
-      <details class="legend-panel" id="legendPanel">
-        <summary>Categories</summary>
-        <div class="legend-content" id="legendPopover">
-          <input id="legendSearch" type="search" placeholder="Filter categories…" />
-          <div id="legend"></div>
-        </div>
-      </details>
-
-      <input id="eventSearch" class="toolbarSearch" type="search" placeholder="Search events…" />
-
-      <div class="toolbarSpacer"></div>
-
-      <div class="zoomGroup">
-        <button id="zoomOut" class="ghost">−</button>
-        <button id="zoomIn" class="ghost">＋</button>
-        <button id="resetZoom" class="ghost">Reset</button>
+ 
+<div id="timelineContainer">
+  <div class="timelineToolbar">
+    <details class="legend-panel" id="legendPanel">
+      <summary>Categories</summary>
+      <div class="legend-content" id="legendPopover">
+        <input id="legendSearch" type="search" placeholder="Filter categories…" />
+        <div id="legend"></div>
       </div>
+    </details>
+
+    <input id="eventSearch" class="toolbarSearch" type="search" placeholder="Search events…" />
+
+    <div class="toolbarSpacer"></div>
+
+    <div class="zoomGroup">
+      <button id="zoomOut" class="ghost">−</button>
+      <button id="zoomIn" class="ghost">＋</button>
+      <button id="resetZoom" class="ghost">Reset</button>
     </div>
-
-    <canvas id="timelineCanvas"></canvas>
   </div>
 
-  <div id="hoverTooltip" class="hoverTooltip" role="tooltip" aria-hidden="true"></div>
+  <canvas id="timelineCanvas"></canvas>
+</div>
 
-  <div id="detailsPanel" class="details hidden">
-    <button id="detailsClose" class="close" aria-label="Close">×</button>
-    <div id="detailsContent"></div>
-  </div>
+<div id="hoverTooltip" class="hoverTooltip" role="tooltip" aria-hidden="true"></div>
+
+<div id="detailsPanel" class="details hidden">
+  <button id="detailsClose" class="close" aria-label="Close">×</button>
+  <div id="detailsContent"></div>
+</div>
+
 
   <!-- Load the timeline logic after the DOM -->
   <script src="timeline.js?v=6-patch5" defer></script>

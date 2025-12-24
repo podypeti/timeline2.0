@@ -1014,6 +1014,19 @@ function draw() {
   });
 }
 
+// ===== Init =====
+function initScaleAndPan() {
+  sizeCanvasToCss();
+  const baseScale = canvas.clientWidth / (MAX_YEAR - MIN_YEAR);
+  scale = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, baseScale));
+  panX = (canvas.clientWidth / 2) - ((INITIAL_CENTER_YEAR - MIN_YEAR) * scale);
+}
+
+// ===== Responsive =====
+window.addEventListener('resize', () => { draw(); });
+
+// ===== Startup =====
+
 document.addEventListener('DOMContentLoaded', async () => {
   initScaleAndPan();
   try {

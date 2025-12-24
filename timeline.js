@@ -80,17 +80,36 @@ function matchesEventSearch(ev, term) {
 }
 
 // ===== Utils =====
+
 function sizeCanvasToCss() {
+  // Read current CSS box
   const rect = canvas.getBoundingClientRect();
-  W = Math.max(1, Math.floor(rect.width * dpr));
-  H = Math.max(1, Math.floor(rect.height * dpr));
-  canvas.width = W;
+
+  // Fallbacks when CSS box is 0 (e.g., stylesheet didn't load yet)
+  const cssW = rect.width  || canvas.clientWidth  || 800;
+  const cssH = rect.height || canvas.clientHeight || 560;
+
+  // Device pixel ratio (always >= 1)
+  dpr = Math.max(1, (window.devicePixelRatio ?? 1));
+
+  // Set the drawing buffer (in physical pixels)
+  W = Math.max(1, Math.floor(cssW * dpr));
+  H = Math.max(1, Math.floor(cssH * dpr));
+  canvas.width  = W;
   canvas.height = H;
+
+  // Also ensure the element itself has a visible box if styles failed
+  if (!rect.height || !rect.width) {
+    canvas.style.width      = '100%';
+    canvas.style.height     = '560px';
+    canvas.style.display    = 'block';
+    canvas.style.marginTop  = '64px';
+  }
+
+  // Map drawing units back to CSS pixels
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 }
-
-ctx.fillStyle = '#ff0044';
-ctx.fillRect(20, 80, 240, 24); 
+ 
 
 function formatYearHuman(y) {
   if (y < 0) return `${Math.abs(y)} BCE`;

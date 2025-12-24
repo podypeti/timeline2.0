@@ -1118,3 +1118,22 @@ function hideTooltip() {
 
 
 window.addEventListener('resize', () => { draw(); });
+
+// ===== Startup =====
+document.addEventListener('DOMContentLoaded', async () => {
+  // 1) set initial zoom/pan based on canvas width
+  initScaleAndPan();
+
+  // 2) load your data
+  try {
+    events = await loadCsv('timeline-data.csv?v=' + ASSET_VERSION);
+  } catch (err) {
+    console.error('[timeline] CSV load failed', err);
+    // still draw a helpful hint if CSV fails
+  }
+
+  // 3) build legend UI and 4) draw everything
+  buildLegend();
+  draw();
+});
+

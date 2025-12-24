@@ -1112,7 +1112,7 @@ function setTooltip(text, x, y) {
 function hideTooltip() {
   setTooltip('', 0, 0);
 }
-}
+}}
 
 // ===== Responsive =====
 

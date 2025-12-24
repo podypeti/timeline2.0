@@ -1066,7 +1066,40 @@ function initScaleAndPan() {
 // ===== Responsive =====
 window.addEventListener('resize', () => { draw(); });
 
+function wireUi() {
+  // Zoom buttons
+  const btnZoomIn  = document.getElementById('zoomIn');
+  const btnZoomOut = document.getElementById('zoomOut');
+  const btnReset   = document.getElementById('resetZoom');
+
+  if (btnZoomIn)  btnZoomIn.onclick  = () => zoomIn(document.getElementById('timelineCanvas').clientWidth / 2);
+  if (btnZoomOut) btnZoomOut.onclick = () => zoomOut(document.getElementById('timelineCanvas').clientWidth / 2);
+  if (btnReset)   btnReset.onclick   = () => resetAll();
+
+  // Legend popover toggle (see CSS .legend-panel / .legend-content)
+  const legendPanel   = document.querySelector('.legend-panel');
+  const legendPopover = document.getElementById('legendPopover');
+
+  if (legendPanel && legendPopover) {
+    // Position and show the popover under the summary
+    legendPanel.addEventListener('click', (e) => {
+      const rect = legendPanel.getBoundingClientRect();
+      legendPopover.style.left = `${rect.left}px`;
+      legendPopover.style.top  = `${rect.bottom + 4}px`;
+      legendPopover.classList.toggle('popover-show');
+    });
+
+    // Click outside to close
+    document.addEventListener('click', (e) => {
+      const insidePanel   = legendPanel.contains(e.target);
+      const insidePopover = legendPopover.contains(e.target);
+      if (!insidePanel && !insidePopover) legendPopover.classList.remove('popover-show');
+    });
+  }
+}
+
 // ===== Startup =====
+
 
 document.addEventListener('DOMContentLoaded', async () => {
   initScaleAndPan();
@@ -1076,8 +1109,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   } catch (err) {
     console.error('[timeline] CSV load failed', err);
   }
-  buildLegend();
+  buildLegend();   // builds chips inside #legend
+  wireUi();        // <— ensures buttons & popover are clickable
   draw();
 });
+
 
 

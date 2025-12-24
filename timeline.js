@@ -88,6 +88,10 @@ function sizeCanvasToCss() {
   canvas.height = H;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 }
+
+ctx.fillStyle = '#ff0044';
+ctx.fillRect(20, 80, 240, 24); 
+
 function formatYearHuman(y) {
   if (y < 0) return `${Math.abs(y)} BCE`;
   if (y > 0) return `${y} CE`;

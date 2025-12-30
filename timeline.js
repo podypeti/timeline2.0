@@ -365,12 +365,9 @@ function buildLegend() {
     const sw = document.createElement('span');
     sw.className = 'swatch';
     sw.style.background = getGroupColor(g);
-    const icon = document.createElement('span');
-    icon.className = 'chip-icon';
-    icon.textContent = getGroupIcon(g);
     const label = document.createElement('span');
     label.textContent = g;
-    chip.append(sw, icon, label);
+    chip.append(sw, label);
     chip.addEventListener('click', () => {
       filterMode = 'custom';
       if (activeGroups.has(g)) {

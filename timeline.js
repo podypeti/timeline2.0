@@ -436,7 +436,9 @@ function showClusterDetails(cluster) {
   });
 }
 function hideDetails(){ detailsPanel.classList.add('hidden'); detailsContent.innerHTML = ''; }
-detailsClose.addEventListener('click', hideDetails);
+if (detailsClose) {
+  detailsClose.addEventListener('click', hideDetails);
+}
 
 // ===== Month smart formatter =====
 function formatMonthSmart(yearFloat, targetWidthPx) {

@@ -51,6 +51,7 @@ body {
   height: 560px;
   display: block;
   margin-top: 64px; /* adjust if your toolbar height changes */
+margin-bottom: 64px; 
 }
 
 /* ===========================
@@ -171,14 +172,7 @@ body {
 }
 
 /* One-column list inside the popover */
-#legendSearch {
-  width: 100%;
-  padding: 6px 8px;
-  border-radius: 6px;
-  border: 1px solid #ccc;
-  margin-bottom: 8px;
-  font-size: 14px;
-}
+
 .legend-content #legend {
   display: flex !important;
   flex-direction: column !important;
@@ -291,12 +285,12 @@ body {
   .toolbarSearch {
     width: min(54vw, 280px);
   }
+     .legendDock {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
 }
 
-/* Small screens: (close properly; add overrides if needed) */
-@media (max-width: 480px) {
-  /* You can add tighter paddings, reduced max-heights, etc., here. */
-}
 
 /* ===========================
    Optional: Floating reset button (if you keep it)
@@ -315,4 +309,57 @@ body {
   box-shadow: 0  2px 8px var(--shadow);
   cursor: pointer;
 }
+
+/* ===== Bottom legend strip (always visible) ===== */
+.legendDock {
+  position: fixed;             /* pin at bottom; change to 'static' if you prefer */
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 8px 10px;
+  background: rgba(255,255,255,0.92);
+  border-top: 1px solid #0002;
+  box-shadow: 0 -6px 18px var(--shadow);
+  z-index: 15;                 /* above canvas, below details panel (which is z=20) */
+  display: grid;
+  grid-template-columns: 220px 1fr; /* search box + chip scroller */
+  gap: 10px;
+  align-items: center;
+}
+
+/* Search in the legend dock */
+.legendSearch {
+  width: 100%;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  background: #fff;
+  font-size: 14px;
+  box-shadow: 0 1px 2px var(--shadow);
+}
+
+/* Horizontally scrollable chip strip */
+.legendStrip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow-x: auto;            /* horizontal scroll if chips overflow */
+  overflow-y: hidden;
+  padding: 4px 2px;
+  scrollbar-width: thin;       /* Firefox */
+}
+.legendStrip::-webkit-scrollbar { height: 8px; }
+.legendStrip::-webkit-scrollbar-thumb {
+  background: #0003;
+  border-radius: 6px;
+}
+
+/* Your existing chip styling applies; these tweaks help in a strip */
+.legendStrip .chip {
+  flex: 0 0 auto;              /* chips don’t stretch; they stay inline */
+  white-space: nowrap;         /* keep labels on one line */
+}
+
+
+
 

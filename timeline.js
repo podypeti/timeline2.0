@@ -733,8 +733,12 @@ window.loadCsv = loadCsv; // exposes the function globally
 // ===== Main draw =====
 function draw() {
   sizeCanvasToCss();
-  console.log('[diag] draw() events:',
-    Array.isArray(events) ? events.length : 'events not array');
+ // console.log('[diag] draw() events:',
+   // Array.isArray(events) ? events.length : 'events not array');
+  
+  console.log('[diag] draw() W,H (px):', W, H, 'dpr:', dpr, 'CSS size:', canvas?.clientWidth, canvas?.clientHeight);
+  console.log('[diag] scale:', scale, 'panX:', panX);
+  console.log('[diag] events array:', Array.isArray(events), 'length:', events?.length);
 
   // If zero, draw a hint so we can see it on canvas:
   if (!Array.isArray(events) || events.length === 0) {

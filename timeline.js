@@ -1170,18 +1170,21 @@ function wireUi() {
 
 // ===== Startup =====
 
-document.addEventListener('DOMContentLoaded', async () => {
-  initScaleAndPan();
 
+document.addEventListener('DOMContentLoaded', async () => {
+  initScaleAndPan();                 // first pass
   try {
     events = await loadCsv('timeline-data.csv?v=' + ASSET_VERSION);
     console.log('[diag] loaded events:', events.length);
   } catch (err) {
     console.error('[timeline] CSV load failed', err);
   }
+  buildLegend();                     // chips populated
+  wireUi();                          // buttons & wheel zoom wired
 
-  buildLegend();   // chips inside #legend
-  wireUi();        // <— attach all handlers AFTER DOM & chips exist
+  // ⬇️ Ensure the first visible view is centered on 1 CE
+  centerOnYear(INITIAL_CENTER_YEAR);
+
   draw();
 });
 

@@ -34,7 +34,6 @@ const btnZoomIn = document.getElementById('zoomIn');
 const btnZoomOut = document.getElementById('zoomOut');
 const btnReset = document.getElementById('resetZoom');
 const detailsPanel = document.getElementById('detailsPanel');
-const detailsClose = document.getElementById('detailsClose');
 const detailsContent = document.getElementById('detailsContent');
 const legendEl = document.getElementById('legend');
 const hoverTooltip = document.getElementById('hoverTooltip');
@@ -717,8 +716,7 @@ async function loadCsv(url) {
 }
 window.loadCsv = loadCsv; // exposes the function globally
 
-// ===== Main draw =====
-
+  centerOnYear(INITIAL_CENTER_YEAR);
 // ===== Main draw =====
 function draw() {
   sizeCanvasToCss();
@@ -1166,8 +1164,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   wireUi();                          // buttons & wheel zoom wired
 
   // ⬇️ Ensure the first visible view is centered on 1 CE
-  centerOnYear(INITIAL_CENTER_YEAR);
-
   draw();
 });
 

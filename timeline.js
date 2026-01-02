@@ -341,32 +341,56 @@ function addAdminChip(label, onClick, color) {
   legendEl.appendChild(chip);
 }
 
+
 function buildLegend() {
   const groups = [...new Set(
     events.map(e => (e['Group'] ?? '').trim()).filter(Boolean)
   )].sort();
+
   legendEl.innerHTML = '';
   groupChips.clear();
+
+  // Default filter mode: all groups active
   filterMode = 'all';
   activeGroups = new Set(groups);
 
+  // --- Admin: "All" ---
+  addAdminChip('All', () => {
+    filterMode = 'all';
+    activeGroups = new Set(groups);              // enable all groups
+    // Remove inactive class from all group chips
+    groupChips.forEach(chip => chip.classList.remove('inactive'));
+    draw();
+  }, '#0d6efd');
+  // mark for CSS targeting (optional)
+  const allChip = legendEl.lastElementChild;
+  if (allChip) allChip.dataset.admin = 'all';
+
+  // --- Admin: "None" ---
   addAdminChip('None', () => {
     activeGroups.clear();
     filterMode = 'none';
     groupChips.forEach(chip => chip.classList.add('inactive'));
     draw();
   }, '#c33');
+  const noneChip = legendEl.lastElementChild;
+  if (noneChip) noneChip.dataset.admin = 'none';
 
+  // --- Regular group chips ---
   groups.forEach(g => {
     const chip = document.createElement('div');
     chip.className = 'chip';
     chip.dataset.group = g;
+
     const sw = document.createElement('span');
     sw.className = 'swatch';
     sw.style.background = getGroupColor(g);
+
     const label = document.createElement('span');
     label.textContent = g;
+
     chip.append(sw, label);
+
     chip.addEventListener('click', () => {
       filterMode = 'custom';
       if (activeGroups.has(g)) {
@@ -378,10 +402,12 @@ function buildLegend() {
       }
       draw();
     });
+
     legendEl.appendChild(chip);
     groupChips.set(g, chip);
   });
 
+  // Wire legend search (unchanged)
   const search = document.getElementById('legendSearch');
   if (search && !search._wired) {
     search.addEventListener('input', e => {
@@ -393,19 +419,21 @@ function buildLegend() {
     search._wired = true;
   }
 
+  // Wire event search (unchanged)
   const es = document.getElementById('eventSearch');
   if (es && !es._wired) {
     let timer = null;
     es.addEventListener('input', () => {
       clearTimeout(timer);
       timer = setTimeout(() => {
-        eventSearchTerm = es.value || '';
+        eventSearchTerm = es.value ?? '';
         draw();
       }, 120);
     });
     es._wired = true;
   }
 }
+
 
 // ===== Details =====
 function escapeHtml(s) {

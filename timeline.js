@@ -222,16 +222,6 @@ function resetAll() {
   draw();
 }
 
-btnZoomIn?.addEventListener('click', () => {
-  const anchor = canvas ? (canvas.clientWidth / 2) : 0;
-  zoomTo(scale * 1.3, anchor);
-});
-btnZoomOut?.addEventListener('click', () => {
-  const anchor = canvas ? (canvas.clientWidth / 2) : 0;
-  zoomTo(scale / 1.3, anchor);
-});
-btnReset?.addEventListener('click', () => resetAll());
-
 // ===== JDN =====
 function gregorianToJDN(y, m, d) {
   const a = Math.floor((14 - m) / 12);
@@ -1131,12 +1121,6 @@ function wireUi() {
   });
 
   // --- (Popover REMOVED) ---
-
-  // --- Details close button ---
-  const detailsCloseBtn = document.getElementById('detailsClose');
-  detailsCloseBtn?.addEventListener('click', () => {
-    hideDetails();
-  });
 
   // Optional: wheel zoom
   canvas?.addEventListener('wheel', (e) => {

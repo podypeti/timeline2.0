@@ -1057,6 +1057,12 @@ function draw() {
 
     } else {
       const r = Math.min(14, 7 + Math.log2(n + 1));
+      
+drawHitRects.push({
+  kind: 'cluster', cluster,
+  x: x - (r + 2), y: y - (r + 2),
+  w: (r + 2) * 2, h: (r + 2) * 2
+})
       ctx.fillStyle = '#0077ff';
       ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
 
@@ -1150,8 +1156,12 @@ if (showTimePeriodsBand) {
       const fillCol = bar.color.replace('45%', '85%');
       
       // hit-test
-      const pr = pointRadius();
-      drawHitRects.push({ kind: 'bar', ev: bar.ev, x: bar.bx, y, w: bar.bw, h: pillH });
+      const pr = pointRadius();     
+drawHitRects.push({
+  kind: 'point', ev,
+  x: x - (pr + 2), y: y - (pr + 2),
+  w: (pr + 2) * 2, h: (pr + 2) * 2
+});
 
       // inside text only if there is room (avoid overlap)
       if (bar.title) {

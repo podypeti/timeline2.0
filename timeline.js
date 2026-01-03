@@ -28,7 +28,7 @@ const TP_BAND_PAD_X = 6;               // horizontal padding inside band
 const TP_BAND_LABEL = '';  // band label text
 const TP_BAND_DRAW_BACKGROUND = false; 
 const TP_BAND_DRAW_LABEL = false;      // ← turn off the "Time periods" label
-
+const TP_BAND_LABEL_PLACEMENT = 'outside-left';
 // ===== DOM =====
 const canvas = document.getElementById('timelineCanvas');
 const ctx = canvas.getContext('2d');
@@ -1072,26 +1072,35 @@ if (showTimePeriodsBand) {
       fillStrokeRoundedRect(bar.bx, y, bar.bw, pillH, 8, fillCol, '#00000022');
       drawHitRects.push({ kind: 'bar', ev: bar.ev, x: bar.bx, y, w: bar.bw, h: pillH });
 
-      if (bar.title) {
-        const padL = 6, padR = 6;
-        const available = Math.max(0, bar.bw - (padL + padR));
-        if (available >= 52) {
-          function ellipsizeToWidth(text, maxW) {
-            if (!text) return '';
-            if (ctx.measureText(text).width <= maxW) return text;
-            let lo = 0, hi = text.length;
-            while (lo < hi) {
-              const mid = ((lo + hi) >> 1);
-              const cand = text.slice(0, mid) + '…';
-              if (ctx.measureText(cand).width <= maxW) lo = mid + 1; else hi = mid;
-            }
-            return text.slice(0, Math.max(1, lo - 1)) + '…';
-          }
-          const text = ellipsizeToWidth(bar.title, available);
-          ctx.fillStyle = (bar.bw < 40) ? '#fff' : '#111';
-          ctx.fillText(text, bar.bx + padL, y + 1);
-        }
-      }
+if (bar.title) {
+  ctx.font = `${fontPx(14)}px sans-serif`;
+  ctx.textBaseline = 'top';
+
+  if (TP_BAND_LABEL_PLACEMENT === 'outside-left') {
+    // ---- Draw title OUTSIDE, immediately before the bar’s left edge
+    // Right-align the text so its right edge kisses the bar start (with a small gap).
+    const gap = 6;                      // pixels between text and bar
+    const maxW = 260;                   // optional: limit label width
+    const text = ellipsizeToWidth(bar.title, maxW);
+    const tx = bar.bx - gap;            // right edge of the text block
+    const ty = y + 1;                   // vertical offset like inside-pill
+
+    ctx.textAlign = 'right';
+    ctx.fillStyle = '#111';
+    ctx.fillText(text, tx, ty);
+
+  } else {
+    // ---- Default: draw title INSIDE the pill as before
+    const padL = 6, padR = 6;
+    const available = Math.max(0, bar.bw - (padL + padR));
+    if (available >= 52) {
+      const text = ellipsizeToWidth(bar.title, available);
+      ctx.textAlign = 'start';
+      ctx.fillStyle = (bar.bw < 40) ? '#fff' : '#111';
+      ctx.fillText(text, bar.bx + padL, y + 1);
+    }
+  }
+}
     });
   });
 } // ← band block closes here

@@ -25,7 +25,9 @@ function clusterPxThreshold() {
 const TP_BAND_Y = 260;                 // top Y position of the band (CSS px)
 const TP_BAND_H = 62;                  // band height
 const TP_BAND_PAD_X = 6;               // horizontal padding inside band
-const TP_BAND_LABEL = 'Time periods';  // band label text
+const TP_BAND_LABEL = '';  // band label text
+const TP_BAND_DRAW_BACKGROUND = false; 
+const TP_BAND_DRAW_LABEL = false;      // ← turn off the "Time periods" label
 
 // ===== DOM =====
 const canvas = document.getElementById('timelineCanvas');

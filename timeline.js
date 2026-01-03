@@ -843,7 +843,8 @@ function draw() {
 
   // If zero, draw a hint so we can see it on canvas:
   if (!Array.isArray(events) || events.length === 0) {
-    ctx.fillStyle = '#000'; ctx.font = `${fontPx(14)}px sans-serif`;
+    ctx.fillStyle = '#000'; 
+    ctx.font = `${fontPx(14)}px sans-serif`;
     ctx.fillText('No events loaded. Check CSV path and CORS.', 18, 28);
     return;
   }
@@ -1053,7 +1054,7 @@ function draw() {
       ctx.fillStyle = col;
       ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI * 2); ctx.fill();
 
-      drawHitRects.push({ kind: 'point', ev, x: x - 6, y: y - 6, w: 12, h: 12 });
+      drawHitRects.push({ kind: 'point', bar.ev, x: x - 6, y: y - 6, w: 12, h: 12 });
 
     } else {
       const r = Math.min(14, 7 + Math.log2(n + 1));
@@ -1096,6 +1097,18 @@ if (showTimePeriodsBand) {
   ctx.fillText(TP_BAND_LABEL, 10, TP_BAND_Y + 6);
   ctx.restore();
 
+// ===== Generic range bars row (non-"Time periods") =====
+ctx.font = `${fontPx(14)}px sans-serif`;
+ctx.textBaseline = 'top';
+otherRangeBars.forEach(bar => {
+  const fillCol = bar.color.replace('45%', '85%');
+  const th = barThickness();
+  fillStrokeRoundedRect(bar.x, rowYBar, bar.w, th, 8, fillCol, '#00000022');  // draw bar
+  if (bar.title) { ctx.fillStyle = '#111'; ctx.fillText(bar.title, bar.x + bar.w + 8, rowYBar); }
+  drawHitRects.push({ kind: 'bar', ev: bar.ev, x: bar.x, y: rowYBar, w: bar.w, h: th });
+});
+
+  
   // ---- Compute adaptive row layout
   // Normalize bar geometry first (respect padding & min width)
   const bars = timePeriodBars.map(b => {
@@ -1154,14 +1167,10 @@ if (showTimePeriodsBand) {
     const y = stackTop + idx * (pillH + 6); // 6px spacing between rows
     row.items.forEach(bar => {
       const fillCol = bar.color.replace('45%', '85%');
-      
+            fillStrokeRoundedRect(bar.bx, y, bar.bw, pillH, 8, fillCol, '#00000022');
       // hit-test
       const pr = pointRadius();     
-drawHitRects.push({
-  kind: 'point', ev,
-  x: x - (pr + 2), y: y - (pr + 2),
-  w: (pr + 2) * 2, h: (pr + 2) * 2
-});
+drawHitRects.push({ kind: 'bar', bar.ev: bar.ev, x: bar.bx, y, w: bar.bw, h: pillH});
 
       // inside text only if there is room (avoid overlap)
       if (bar.title) {

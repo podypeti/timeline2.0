@@ -1,63 +1,68 @@
 
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1, user-scalable=no"
-    />
-    <title>History Timeline</title>
+<head>
+  <meta charset="utf-8" />
+  <title>History Timeline</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <!-- Your styles -->
+  style.css?v=1
+  <!-- Optional: separate legend button cosmetics if you use them -->
+  <!-- style.legend-buttons.css?v=1 -->
+  <style>
+    /* Minimal details panel styling so clicks on clusters show a box */
+    .hidden { display: none; }
+    #detailsPanel {
+      position: fixed;
+      right: 12px; top: 84px;
+      width: min(420px, 86vw);
+      max-height: 70vh;
+      background: #fff;
+      border: 1px solid #0002;
+      border-radius: 10px;
+      box-shadow: 0 8px 28px #0003;
+      z-index: 20;
+      overflow: auto;
+      padding: 12px 14px 14px;
+    }
+    #detailsPanel h3 { margin: 0 0 6px; }
+    #detailsPanel .meta { color:#556; font-size: 0.9rem; margin-top: 4px; }
+    #detailsClose {
+      position: absolute; right: 10px; top: 8px;
+      border: 0; background:#fff; font-size: 18px; cursor:pointer;
+    }
+    /* Keep the canvas clickable above the toolbar, but below the details panel */
+    #timelineCanvas { position: relative; z-index: 10; }
+  </style>
+</head>
+<body>
 
-    <!-- Styles -->
-    <link rel="stylesheet" href="style.css?v=6-patch5" />
-    <!-- Add-on styles you uploaded (button chips, toolbar, dock) -->
-    style (2).css?v=1</link>
-  </head>
-  <body>
-    <div id="timelineContainer">
-      <!-- Top toolbar -->
-      <div class="timelineToolbar" role="toolbar" aria-label="Timeline controls">
-        <input
-          id="eventSearch"
-          class="toolbarSearch"
-          type="search"
-          placeholder="Search events…"
-          aria-label="Search events"
-        />
-        <div class="zoomGroup" aria-label="Zoom controls">
-          <button id="zoomOut" class="ghost" title="Zoom out">−</button>
-          <button id="zoomIn" class="ghost" title="Zoom in">+</button>
-          <button id="resetZoom" class="ghost" title="Reset view">Reset</button>
-        </div>
-      </div>
-
-      <!-- Canvas (timeline drawing surface) -->
-      <canvas id="timelineCanvas"></canvas>
-
-      <!-- Bottom legend dock -->
-      <div id="legendDock" class="legendDock" role="navigation" aria-label="Categories">
-        <input
-          id="legendSearch"
-          type="search"
-          class="legendSearch"
-          placeholder="Filter categories…"
-          aria-label="Filter categories"
-        />
-        <div id="legend" class="legendStrip" aria-live="polite"></div>
-      </div>
-
-      <!-- Details panel -->
-      <div id="detailsPanel" class="details hidden" aria-live="polite">
-        <button id="detailsClose" class="close" title="Close">×</button>
-        <div id="detailsContent"></div>
-      </div>
-
-      <!-- Optional hover tooltip -->
-      <div id="hoverTooltip" class="hoverTooltip" aria-hidden="true"></div>
+  <!-- Toolbar -->
+  <div class="timelineToolbar">
+    <input id="eventSearch" class="toolbarSearch" type="search" placeholder="Search events…" />
+    <div class="zoomGroup">
+      <button id="zoomOut" class="ghost">−</button>
+      <button id="zoomIn" class="ghost">+</button>
+      <button id="resetZoom" class="ghost">Reset</button>
     </div>
+  </div>
 
-    <!-- Script -->
-    <script src="timeline.js?v=6-patch5" defer></script>
-  </body>
+  <!-- Canvas where the timeline is drawn -->
+  <canvas id="timelineCanvas"></canvas>
+
+  <!-- Bottom legend dock (chips + search) -->
+  <div class="legendDock">
+    <input id="legendSearch" class="toolbarSearch" type="search" placeholder="Search groups…" />
+    <div id="legend" class="legendStrip"></div>
+  </div>
+
+  <!-- Details panel shown when clicking a single event or a cluster -->
+  <div id="detailsPanel" class="hidden">
+    <button id="detailsClose" title="Close">×</button>
+    <div id="detailsContent"></div>
+  </div>
+
+  <!-- Your timeline logic -->
+  timeline.js?v=6-patch5</script>
+</body>
 </html>

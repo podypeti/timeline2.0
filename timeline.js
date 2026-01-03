@@ -1102,7 +1102,7 @@ if (showTimePeriodsBand) {
   ctx.textBaseline = 'top';
   ctx.fillText(TP_BAND_LABEL, 10, TP_BAND_Y + 6);
   ctx.restore();
-});
+};
   
   // ===== Generic range bars row (non-"Time periods") =====
 ctx.font = `${fontPx(14)}px sans-serif`;

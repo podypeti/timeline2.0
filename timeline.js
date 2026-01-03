@@ -1106,6 +1106,7 @@ if (showTimePeriodsBand) {
       const fillCol = bar.color.replace('45%', '85%');
       
       // hit-test
+      const pr = pointRadius();
       drawHitRects.push({ kind: 'bar', ev: bar.ev, x: bar.bx, y, w: bar.bw, h: pillH });
 
       // inside text only if there is room (avoid overlap)

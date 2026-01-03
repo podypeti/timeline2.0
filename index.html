@@ -11,6 +11,8 @@
 
     <!-- Styles -->
     <link rel="stylesheet" href="style.css?v=6-patch5" />
+    <!-- Add-on styles you uploaded (button chips, toolbar, dock) -->
+    style (2).css?v=1</link>
   </head>
   <body>
     <div id="timelineContainer">
@@ -23,9 +25,6 @@
           placeholder="Search events…"
           aria-label="Search events"
         />
-
-        <div class="toolbarSpacer"></div>
-
         <div class="zoomGroup" aria-label="Zoom controls">
           <button id="zoomOut" class="ghost" title="Zoom out">−</button>
           <button id="zoomIn" class="ghost" title="Zoom in">+</button>
@@ -36,7 +35,7 @@
       <!-- Canvas (timeline drawing surface) -->
       <canvas id="timelineCanvas"></canvas>
 
-      <!-- Bottom legend dock: horizontally scrollable category chips -->
+      <!-- Bottom legend dock -->
       <div id="legendDock" class="legendDock" role="navigation" aria-label="Categories">
         <input
           id="legendSearch"
@@ -48,13 +47,13 @@
         <div id="legend" class="legendStrip" aria-live="polite"></div>
       </div>
 
-      <!-- Event details panel -->
+      <!-- Details panel -->
       <div id="detailsPanel" class="details hidden" aria-live="polite">
         <button id="detailsClose" class="close" title="Close">×</button>
         <div id="detailsContent"></div>
       </div>
 
-      <!-- Optional hover tooltip target -->
+      <!-- Optional hover tooltip -->
       <div id="hoverTooltip" class="hoverTooltip" aria-hidden="true"></div>
     </div>
 

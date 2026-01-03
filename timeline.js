@@ -1037,41 +1037,48 @@ function draw() {
   }
   pushCurrent();
 
-  // ===== Draw clusters (points and multi-event circles) =====
-  ctx.textBaseline = 'top';
-  ctx.font = `${fontPx(14)}px sans-serif`;
+  
+// ===== Draw clusters (points and multi-event circles) =====
+ctx.textBaseline = 'top';
+ctx.font = `${fontPx(14)}px sans-serif`;
+clusters.forEach(cluster => {
+  const n = cluster.events.length;
+  const x = cluster.centerX;
+  const y = cluster.y;
 
-  clusters.forEach(cluster => {
-    const n = cluster.events.length;
-    const x = cluster.centerX;
-    const y = cluster.y;
+  if (n === 1) {
+    const ev = cluster.events[0];
+    const group = (ev['Group'] ?? '').trim();
+    const col = getGroupColor(group);
 
-    if (n === 1) {
-      const ev = cluster.events[0];
-      const group = (ev['Group'] ?? '').trim();
-      const col = getGroupColor(group);
+    // dot
+    ctx.fillStyle = col;
+    ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI * 2); ctx.fill();
 
-      ctx.fillStyle = col;
-      ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI * 2); ctx.fill();
-      drawHitRects.push({ kind: 'point', ev: bar.ev, x: x - 6, y: y - 6, w: 12, h: 12 });
+    // hit rect — use the scoped `ev`, NOT bar.ev
+    drawHitRects.push({ kind: 'point', ev, x: x - 6, y: y - 6, w: 12, h: 12 });
+  } else {
+    const r = Math.min(14, 7 + Math.log2(n + 1));
 
-    } else {
-      const r = Math.min(14, 7 + Math.log2(n + 1));
-      
-drawHitRects.push({
-  kind: 'cluster', cluster,
-  x: x - (r + 2), y: y - (r + 2),
-  w: (r + 2) * 2, h: (r + 2) * 2
-})
-      ctx.fillStyle = '#0077ff';
-      ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+    // draw first, then push one hit rect
+    ctx.fillStyle = '#0077ff';
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
 
-      ctx.fillStyle = '#fff'; ctx.font = '12px sans-serif'; ctx.textBaseline = 'middle'; ctx.textAlign = 'center';
-      ctx.fillText(String(n), x, y);
+    ctx.fillStyle = '#fff';
+    ctx.font = '12px sans-serif'; ctx.textBaseline = 'middle'; ctx.textAlign = 'center';
+    ctx.fillText(String(n), x, y);
 
-      drawHitRects.push({ kind: 'cluster', cluster, x: x - (r + 2), y: y - (r + 2), w: (r + 2) * 2, h: (r + 2) * 2 });
-    }
-  });
+    // hit rect (single, clean)
+    drawHitRects.push({
+      kind: 'cluster',
+      cluster,
+      x: x - (r + 2),
+      y: y - (r + 2),
+      w: (r + 2) * 2,
+      h: (r + 2) * 2
+    });
+  }
+});
 
   // Labels for single points
   const singles = clusters.filter(c => c.events.length === 1);
@@ -1095,8 +1102,9 @@ if (showTimePeriodsBand) {
   ctx.textBaseline = 'top';
   ctx.fillText(TP_BAND_LABEL, 10, TP_BAND_Y + 6);
   ctx.restore();
-
-// ===== Generic range bars row (non-"Time periods") =====
+});
+  
+  // ===== Generic range bars row (non-"Time periods") =====
 ctx.font = `${fontPx(14)}px sans-serif`;
 ctx.textBaseline = 'top';
 otherRangeBars.forEach(bar => {
@@ -1105,8 +1113,6 @@ otherRangeBars.forEach(bar => {
   fillStrokeRoundedRect(bar.x, rowYBar, bar.w, th, 8, fillCol, '#00000022');  // draw bar
   if (bar.title) { ctx.fillStyle = '#111'; ctx.fillText(bar.title, bar.x + bar.w + 8, rowYBar); }
   drawHitRects.push({ kind: 'bar', ev: bar.ev, x: bar.x, y: rowYBar, w: bar.w, h: th });
-});
-
   
   // ---- Compute adaptive row layout
   // Normalize bar geometry first (respect padding & min width)
@@ -1164,36 +1170,28 @@ otherRangeBars.forEach(bar => {
 
   rows.forEach((row, idx) => {
     const y = stackTop + idx * (pillH + 6); // 6px spacing between rows
-    row.items.forEach(bar => {
-      const fillCol = bar.color.replace('45%', '85%');
-            fillStrokeRoundedRect(bar.bx, y, bar.bw, pillH, 8, fillCol, '#00000022');
-      // hit-test
-      const pr = pointRadius();     
-drawHitRects.push({ kind: 'point', ev: bar.ev, x: x - 6, y: y - 6, w: 12, h: 12 });
+   
+row.items.forEach(bar => {
+  const fillCol = bar.color.replace('45%', '85%');
 
-      // inside text only if there is room (avoid overlap)
-      if (bar.title) {
-        const padL = 6, padR = 6;
-        const available = Math.max(0, bar.bw - (padL + padR));
-        if (available >= 52) { // keep label only for sufficiently wide pills
-          // local ellipsizer
-          function ellipsizeToWidth(text, maxW) {
-            if (!text) return '';
-            if (ctx.measureText(text).width <= maxW) return text;
-            let lo = 0, hi = text.length;
-            while (lo < hi) {
-              const mid = (lo + hi) >> 1;
-              const cand = text.slice(0, mid) + '…';
-              if (ctx.measureText(cand).width <= maxW) lo = mid + 1; else hi = mid;
-            }
-            return text.slice(0, Math.max(1, lo - 1)) + '…';
-          }
-          const text = ellipsizeToWidth(bar.title, available);
-          ctx.fillStyle = (bar.bw < 40) ? '#fff' : '#111';
-          ctx.fillText(text, bar.bx + padL, y + 1);
-        }
-      }
-    });
+  // draw pill
+  fillStrokeRoundedRect(bar.bx, y, bar.bw, pillH, 8, fillCol, '#00000022');
+
+  // hit rect — kind: 'bar' (geometry in CSS px)
+  drawHitRects.push({ kind: 'bar', ev: bar.ev, x: bar.bx, y, w: bar.bw, h: pillH });
+
+  // inside text only if there is room
+  if (bar.title) {
+    const padL = 6, padR = 6;
+    const available = Math.max(0, bar.bw - (padL + padR));
+    if (available >= 52) {
+      const text = ellipsizeToWidth(bar.title, available);
+      ctx.fillStyle = (bar.bw < 40) ? '#fff' : '#111';
+      ctx.fillText(text, bar.bx + padL, y + 1);
+    }
+  }
+});
+ 
   });
  }
 }

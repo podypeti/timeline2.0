@@ -913,53 +913,44 @@ function draw() {
     }
   });
 
-  // ===== Clustering (single points) =====
-  visiblePoints.sort((a, b) => a.x - b.x);
-
-  const clusters = [];
-  let current = null;
-
-  function pushCurrent() {
-    if (current) { clusters.push(current); current = null; }
-  }
-
-  for (const p of visiblePoints) {
-    if (!current) {
-      current = { events: [p.ev], xs: [p.x], y: p.yLabel, groups: new Set([p.group]),
-        colors: [p.color], centerX: p.x, centerYear: p.yearFloat };
-      continue;
-    }
-    const effPx = (scale >= 400 ? 0 : clusterPxThreshold());
-    const sameBucket = (CLUSTER_BY === 'pixel')
-      ? (Math.abs(p.x - current.centerX) <= effPx)
-      : (p.yearKey === Math.round(current.centerYear));
-
-    if (sameBucket) {
-      current.events.push(p.ev);
-      current.xs.push(p.x);
-      current.groups.add(p.group);
-      current.colors.push(p.color);
-
-      const sumX = current.xs.reduce((s, v) => s + v, 0);
-      current.centerX = sumX / current.xs.length;
-
-      const sumYears = current.events.reduce((s, ev) => {
-        const Y = parseInt(ev['Year'], 10), M = parseInt(ev['Month'], 10), D = parseInt(ev['Day'], 10);
-        const T = ev['Time'] ?? '';
-        const yf = dateToYearFloat(Y, M, D, T);
-        return s + (Number.isFinite(yf) ? yf : current.centerYear);
-      }, 0);
-      current.centerYear = sumYears / current.events.length;
-
-    } else {
-      pushCurrent();
-      current = { events: [p.ev], xs: [p.x], y: p.yLabel, groups: new Set([p.group]),
-        colors: [p.color], centerX: p.x, centerYear: p.yearFloat };
-    }
-  }
-  pushCurrent();
-
   
+// ===== Clustering (single points) =====
+visiblePoints.sort((a, b) => a.x - b.x);
+const clusters = [];
+let current = null;
+function pushCurrent() { if (current) { clusters.push(current); current = null; } }
+for (const p of visiblePoints) {
+  if (!current) {
+    current = { events: [p.ev], xs: [p.x], y: p.yLabel, groups: new Set([p.group]),
+               colors: [p.color], centerX: p.x, centerYear: p.yearFloat };
+    continue;
+  }
+  const effPx = (scale >= 400 ? 0 : clusterPxThreshold());
+  const sameBucket = (CLUSTER_BY === 'pixel')
+    ? (Math.abs(p.x - current.centerX) <= effPx)
+    : (p.yearKey === Math.round(current.centerYear));
+  if (sameBucket) {
+    current.events.push(p.ev);
+    current.xs.push(p.x);
+    current.groups.add(p.group);
+    current.colors.push(p.color);
+    const sumX = current.xs.reduce((s, v) => s + v, 0);
+    current.centerX = sumX / current.xs.length;
+    const sumYears = current.events.reduce((s, ev) => {
+      const Y = parseInt(ev['Year'], 10), M = parseInt(ev['Month'], 10), D = parseInt(ev['Day'], 10);
+      const T = ev['Time'] ?? '';
+      const yf = dateToYearFloat(Y, M, D, T);
+      return s + (Number.isFinite(yf) ? yf : current.centerYear);
+    }, 0);
+    current.centerYear = sumYears / current.events.length;
+  } else {
+    pushCurrent();
+    current = { events: [p.ev], xs: [p.x], y: p.yLabel, groups: new Set([p.group]),
+               colors: [p.color], centerX: p.x, centerYear: p.yearFloat };
+  }
+}
+pushCurrent();
+
 // ===== Draw clusters (points and multi-event circles) =====
 ctx.textBaseline = 'top';
 ctx.font = `${fontPx(14)}px sans-serif`;
@@ -973,16 +964,14 @@ clusters.forEach(cluster => {
     const group = (ev['Group'] ?? '').trim();
     const col = getGroupColor(group);
 
-    // dot
     ctx.fillStyle = col;
     ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI * 2); ctx.fill();
 
-    // hit rect — use the scoped `ev`, NOT bar.ev
+    // hit rect for single point
     drawHitRects.push({ kind: 'point', ev, x: x - 6, y: y - 6, w: 12, h: 12 });
   } else {
     const r = Math.min(14, 7 + Math.log2(n + 1));
 
-    // draw first, then push one hit rect
     ctx.fillStyle = '#0077ff';
     ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
 
@@ -990,26 +979,20 @@ clusters.forEach(cluster => {
     ctx.font = '12px sans-serif'; ctx.textBaseline = 'middle'; ctx.textAlign = 'center';
     ctx.fillText(String(n), x, y);
 
-    // hit rect (single, clean)
+    // hit rect for cluster
     drawHitRects.push({
-      kind: 'cluster',
-      cluster,
-      x: x - (r + 2),
-      y: y - (r + 2),
-      w: (r + 2) * 2,
-      h: (r + 2) * 2
+      kind: 'cluster', cluster,
+      x: x - (r + 2), y: y - (r + 2), w: (r + 2) * 2, h: (r + 2) * 2
     });
   }
 });
 
-  // Labels for single points
-  const singles = clusters.filter(c => c.events.length === 1);
-  layoutSingleLabels(singles, { gap: gapForScale(), rows: rowsForScale(), y: 118, dy: 18, maxW: maxLabelWidthForScale(), leader: true });
-
+// Labels for single points
+const singles = clusters.filter(c => c.events.length === 1);
+layoutSingleLabels(singles, { gap: gapForScale(), rows: rowsForScale(), y: 118, dy: 18, maxW: maxLabelWidthForScale(), leader: true });
 
 // ===== Dedicated "Time periods" band =====
 const showTimePeriodsBand = isGroupVisible('Time periods') && timePeriodBars.length > 0;
-
 if (showTimePeriodsBand) {
   // ---- Band background & label
   ctx.save();
@@ -1025,7 +1008,7 @@ if (showTimePeriodsBand) {
   ctx.fillText(TP_BAND_LABEL, 10, TP_BAND_Y + 6);
   ctx.restore();
 
-  // ---- Normalize geometry & compute adaptive rows
+  // ---- Normalize geometry & adaptive rows
   const bars = timePeriodBars
     .map(b => {
       const bx = Math.max(TP_BAND_PAD_X, b.x);
@@ -1035,12 +1018,12 @@ if (showTimePeriodsBand) {
     .sort((a, b) => a.cx - b.cx);
 
   const centers = bars.map(b => b.cx);
-  const avgGapPx = bandDensity(centers); // average gap
+  const avgGapPx = bandDensity(centers);
   const DENSE_GAP = 42;
   const VERY_DENSE_GAP = 28;
   let desiredRows = 1;
-  if (avgGapPx < DENSE_GAP) desiredRows = 2;
-  if (avgGapPx < VERY_DENSE_GAP) desiredRows = 3;
+  if (avgGapPx < DENSE_GAP)        desiredRows = 2;
+  if (avgGapPx < VERY_DENSE_GAP)   desiredRows = 3;
 
   const minGap = 8;
   const rows = Array.from({ length: desiredRows }, () => ({ right: -Infinity, items: [] }));
@@ -1053,7 +1036,7 @@ if (showTimePeriodsBand) {
         return true;
       }
     }
-    if (rows.length < 4) { // cap at 4 rows
+    if (rows.length < 4) {
       const newRow = { right, items: [bar] };
       rows.push(newRow);
       return true;
@@ -1065,29 +1048,24 @@ if (showTimePeriodsBand) {
   }
   bars.forEach(placeBarGently);
 
-  // ---- Vertical positioning for pills in the band
-  const pillH = barThickness();
-  const stackH = rows.length * pillH + (rows.length - 1) * 6;
+  // ---- Vertical positioning & draw pills
+  const pillH   = barThickness();
+  const stackH  = rows.length * pillH + (rows.length - 1) * 6;
   const stackTop = TP_BAND_Y + Math.max(22, Math.floor((TP_BAND_H - stackH) / 2));
 
-  // ---- Draw each pill row
   ctx.font = `${fontPx(14)}px sans-serif`;
   ctx.textBaseline = 'top';
   rows.forEach((row, idx) => {
     const y = stackTop + idx * (pillH + 6);
     row.items.forEach(bar => {
       const fillCol = bar.color.replace('45%', '85%');
-      // pill shape
       fillStrokeRoundedRect(bar.bx, y, bar.bw, pillH, 8, fillCol, '#00000022');
-      // hit rect for pill
       drawHitRects.push({ kind: 'bar', ev: bar.ev, x: bar.bx, y, w: bar.bw, h: pillH });
 
-      // optional inside text (if wide enough)
       if (bar.title) {
         const padL = 6, padR = 6;
         const available = Math.max(0, bar.bw - (padL + padR));
         if (available >= 52) {
-          // local ellipsizer
           function ellipsizeToWidth(text, maxW) {
             if (!text) return '';
             if (ctx.measureText(text).width <= maxW) return text;
@@ -1106,7 +1084,7 @@ if (showTimePeriodsBand) {
       }
     });
   });
-} // <-- close the band block
+} // ← band block closes here
 
 // ===== Generic range bars row (non-"Time periods") =====
 ctx.font = `${fontPx(14)}px sans-serif`;
@@ -1121,6 +1099,7 @@ otherRangeBars.forEach(bar => {
 
 // 👇 FINAL closing brace of draw()
 }
+
   
   // ---- Compute adaptive row layout
   // Normalize bar geometry first (respect padding & min width)

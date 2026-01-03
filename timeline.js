@@ -997,20 +997,28 @@ layoutSingleLabels(singles, { gap: gapForScale(), rows: rowsForScale(), y: 118, 
 const showTimePeriodsBand = isGroupVisible('Time periods') && timePeriodBars.length > 0;
 if (showTimePeriodsBand) {
   // ---- Band background & label
-  ctx.save();
-  ctx.fillStyle = '#f3f7ff';
-  ctx.strokeStyle = '#00000015';
-  ctx.beginPath();
-  ctx.rect(0, TP_BAND_Y, W / dpr, TP_BAND_H);
-  ctx.fill();
-  ctx.stroke();
-  ctx.fillStyle = '#335';
-  ctx.font = `${fontPx(14)}px sans-serif`;
-  ctx.textBaseline = 'top';
-  ctx.fillText(TP_BAND_LABEL, 10, TP_BAND_Y + 6);
-  ctx.restore();
+  if (TP_BAND_DRAW_BACKGROUND) {
+    ctx.save();
+    ctx.fillStyle = '#f3f7ff';
+    ctx.strokeStyle = '#00000015';
+    ctx.beginPath();
+    ctx.rect(0, TP_BAND_Y, W / dpr, TP_BAND_H);
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  if (TP_BAND_DRAW_LABEL) {
+    ctx.save();
+    ctx.fillStyle = '#335';
+    ctx.font = `${fontPx(14)}px sans-serif`;
+    ctx.textBaseline = 'top';
+    ctx.fillText(TP_BAND_LABEL, 10, TP_BAND_Y + 6);
+    ctx.restore();
+  }
 
   // ---- Normalize geometry & adaptive rows
+
   const bars = timePeriodBars
     .map(b => {
       const bx = Math.max(TP_BAND_PAD_X, b.x);

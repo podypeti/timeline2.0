@@ -759,8 +759,8 @@ function wireCanvasInteractions() {
   const INERTIA_MAX_MS_SAMPLE = 90;
   const CLICK_SUPPRESS_DRAG_PX = 4; // do not treat as a click if move exceeds this
 const RB_SOFTNESS = 0.28;     // drag overscroll softness (0.25–0.45 feels good)
-const SPRING_K    = 0.0012;   // spring stiffness (per ms^2); higher = stronger pull
-const SPRING_DAMP = 0.018;    // damping on velocity during spring (per ms); higher = more damp
+const SPRING_K    = 0.0010;   // spring stiffness (per ms^2); higher = stronger pull
+const SPRING_DAMP = 0.020;    // damping on velocity during spring (per ms); higher = more damp
   // Helpers for clamping pan to bounds
   function timelineWidthPx() { return (MAX_YEAR - MIN_YEAR) * scale; }
   function panClampBounds() {

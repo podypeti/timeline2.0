@@ -164,6 +164,10 @@
   cursor: grab;
 }
 
+#timelineCanvas.dragging {
+  cursor: grabbing;
+}
+
 .zoomGroup button.ghost:hover { background: #f6f8fa; box-shadow: 0 2px 6px var(--shadow); }
 .zoomGroup button.ghost:active { transform: translateY(1px); }
 

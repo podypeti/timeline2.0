@@ -747,6 +747,8 @@ function hitTest(cssX, cssY) {
 
 function wireCanvasInteractions() {
   if (!canvas) return;
+  if (canvas._wiredInteractions) return;  // ← guard
+  canvas._wiredInteractions = true;
 
   // --- CONFIG ---
   
@@ -1443,6 +1445,9 @@ window.addEventListener('resize', () => {
 
 function wireUi() {
   const canvas = document.getElementById('timelineCanvas');
+  if (!canvas) return;
+  if (canvas._wiredUi) return;            // ← guard
+  canvas._wiredUi = true;
 
   // --- Zoom buttons ---
   const btnZoomIn = document.getElementById('zoomIn');

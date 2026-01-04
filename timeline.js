@@ -753,16 +753,114 @@ function wireCanvasInteractions() {
   // Ensure mobile browsers don’t hijack the gesture
   canvas.style.touchAction = 'none';
 
+  // --- CONFIG ---
+  const CLAMP_PAN = true;             // set false if you prefer unlimited fling
+  const CLAMP_OVERSCROLL = 240;       // px: how far beyond ends we allow
+  const INERTIA_ENABLED = true;
+  const INERTIA_DECAY = 0.92;         // per ~16.7ms tick (≈0.92 → slows in ~0.8s)
+  const INERTIA_MIN_VELOCITY = 0.02;  // px/ms: stop when slower than this
+  const INERTIA_MAX_MS_SAMPLE = 120;  // only last 120ms of movement used for velocity
+
+  // --- Helpers for clamping pan to bounds ---
+  function timelineWidthPx() {
+    return (MAX_YEAR - MIN_YEAR) * scale;
+  }
+  function panClampBounds() {
+    // Keep MIN_YEAR slightly to the left and MAX_YEAR slightly to the right
+    const Wcss = canvas.clientWidth;
+    const tlw = timelineWidthPx();
+    const minPan = -CLAMP_OVERSCROLL;                  // left edge at -overscroll
+    const maxPan = Wcss - tlw + CLAMP_OVERSCROLL;      // right edge at +overscroll
+    return { minPan, maxPan };
+  }
+  function clampPan() {
+    if (!CLAMP_PAN) return;
+    const { minPan, maxPan } = panClampBounds();
+    panX = Math.min(maxPan, Math.max(minPan, panX));
+  }
+
   // --- DRAG (single pointer) state ---
   let isDragging = false;
   let dragStartX = 0;
   let dragStartPanX = 0;
 
+  // Velocity sampling for inertia
+  let lastMoves = []; // array of {x, t}
+  function recordMove(x) {
+    const t = performance.now();
+    lastMoves.push({ x, t });
+    // keep only moves in the last INERTIA_MAX_MS_SAMPLE window
+    const cutoff = t - INERTIA_MAX_MS_SAMPLE;
+    while (lastMoves.length && lastMoves[0].t < cutoff) lastMoves.shift();
+  }
+  function computeVelocityPxPerMs() {
+    if (lastMoves.length < 2) return 0;
+    const first = lastMoves[0];
+    const last = lastMoves[lastMoves.length - 1];
+    const dx = last.x - first.x;
+    const dt = Math.max(1, last.t - first.t);
+    return dx / dt;
+  }
+
+  // --- INERTIA animation state ---
+  let inertiaRaf = null;
+  let inertiaActive = false;
+  let inertiaVx = 0;          // px/ms
+  let inertiaLastTs = 0;
+
+  function cancelInertia() {
+    inertiaActive = false;
+    if (inertiaRaf) { cancelAnimationFrame(inertiaRaf); inertiaRaf = null; }
+  }
+
+  function beginInertia(vxInitialPxPerMs) {
+    if (!INERTIA_ENABLED) return;
+    inertiaVx = vxInitialPxPerMs;
+    if (Math.abs(inertiaVx) < INERTIA_MIN_VELOCITY) return;
+    inertiaActive = true;
+    inertiaLastTs = performance.now();
+
+    const tick = (ts) => {
+      if (!inertiaActive) return;
+      const dt = Math.max(1, ts - inertiaLastTs); // ms
+      inertiaLastTs = ts;
+
+      // advance pan
+      panX += inertiaVx * dt;
+
+      // clamp (and stop if pushing against an end)
+      if (CLAMP_PAN) {
+        const { minPan, maxPan } = panClampBounds();
+        if ((panX <= minPan && inertiaVx < 0) || (panX >= maxPan && inertiaVx > 0)) {
+          panX = Math.max(minPan, Math.min(maxPan, panX));
+          cancelInertia();
+          draw();
+          return;
+        }
+      }
+
+      // exponential decay scaled by dt (so it feels similar across frame rates)
+      const friction = Math.pow(INERTIA_DECAY, dt / 16.67);
+      inertiaVx *= friction;
+
+      // stop when slow
+      if (Math.abs(inertiaVx) < INERTIA_MIN_VELOCITY) {
+        cancelInertia();
+      }
+
+      clampPan();
+      draw();
+      inertiaRaf = requestAnimationFrame(tick);
+    };
+
+    inertiaRaf = requestAnimationFrame(tick);
+  }
+
   // --- PINCH (two pointers) state ---
   const activePointers = new Map();   // pointerId → {x, y}
   let pinchActive = false;
-  let pinchStartDist = 0;             // CSS px distance between the two fingers at start
-  let pinchStartScale = 1;            // scale at pinch start
+  let pinchStartDist = 0;             // CSS px distance at start
+  let pinchStartScale = 1;
 
   function getTwoPointers() {
     if (activePointers.size < 2) return null;
@@ -771,12 +869,12 @@ function wireCanvasInteractions() {
     const p2 = it.next().value;
     return [p1, p2];
   }
-
   function dist(p1, p2) {
     const dx = p2.x - p1.x, dy = p2.y - p1.y;
     return Math.hypot(dx, dy);
   }
 
+  // --- Events ---
   canvas.addEventListener('pointerdown', (e) => {
     // For mouse, only react to the primary (left) button
     if (e.pointerType === 'mouse' && e.button !== 0) return;
@@ -784,14 +882,18 @@ function wireCanvasInteractions() {
     const pos = getCanvasCssPos(e);
     activePointers.set(e.pointerId, pos);
 
-    // Capture this pointer so we keep receiving move events even outside the canvas
+    // Start capture for reliable move events
     if (canvas.setPointerCapture) canvas.setPointerCapture(e.pointerId);
+
+    // Any user pointer input → stop inertia
+    cancelInertia();
 
     if (activePointers.size === 1) {
       // Start a drag
       isDragging = true;
       dragStartX = pos.x;
       dragStartPanX = panX;
+      lastMoves = [{ x: pos.x, t: performance.now() }];
       canvas.classList.add('dragging');
     } else if (activePointers.size === 2) {
       // Start a pinch
@@ -813,18 +915,14 @@ function wireCanvasInteractions() {
     activePointers.set(e.pointerId, pos);
 
     if (pinchActive && activePointers.size >= 2) {
+      // Pinch-zoom anchored under midpoint
       const two = getTwoPointers();
       if (two) {
         const [p1, p2] = two;
         const currDist = Math.max(1, dist(p1, p2));
-        // Zoom factor relative to start
         const factor = currDist / pinchStartDist;
         const newScale = pinchStartScale * factor;
-
-        // Anchor zoom under the current midpoint of the two fingers
         const anchorCssX = (p1.x + p2.x) / 2;
-
-        // Use your existing zoom routine (keeps the anchor year fixed)
         zoomTo(newScale, anchorCssX);
       }
       e.preventDefault();
@@ -832,8 +930,10 @@ function wireCanvasInteractions() {
     }
 
     if (isDragging && activePointers.size === 1) {
-      const dx = pos.x - dragStartX;   // CSS px delta from drag start
+      const dx = pos.x - dragStartX;      // CSS px delta from drag start
       panX = dragStartPanX + dx;
+      recordMove(pos.x);                  // INERTIA: collect velocity samples
+      clampPan();                         // CLAMP
       draw();
       e.preventDefault();
       return;
@@ -845,6 +945,7 @@ function wireCanvasInteractions() {
   });
 
   function endPointer(e) {
+    const hadDrag = isDragging;
     activePointers.delete(e.pointerId);
 
     // Release capture for this pointer
@@ -862,11 +963,18 @@ function wireCanvasInteractions() {
         isDragging = true;
         dragStartX = remaining.x;
         dragStartPanX = panX;
+        lastMoves = [{ x: remaining.x, t: performance.now() }];
       } else {
         isDragging = false;
       }
     } else if (isDragging && activePointers.size === 0) {
       isDragging = false;
+    }
+
+    // INERTIA: if we finished a single-pointer drag, start kinetic scroll
+    if (hadDrag && !pinchActive && activePointers.size === 0) {
+      const vx = computeVelocityPxPerMs();
+      beginInertia(vx);
     }
 
     if (!isDragging && !pinchActive) {
@@ -881,7 +989,7 @@ function wireCanvasInteractions() {
     if (e.pointerType === 'mouse') endPointer(e);
   });
 
-  // Prevent right-click menu on canvas
+  //Prevent right-click menu on canvas
   canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 }
 

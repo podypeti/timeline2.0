@@ -739,12 +739,11 @@ function hitTest(cssX, cssY) {
 function wireCanvasInteractions() {
   if (!canvas) return;
 
-  // CLICK → open event(s)
+  // Keep the existing CLICK handler (open event/cluster)
   canvas.addEventListener('click', (e) => {
     const { x, y } = getCanvasCssPos(e);
     const hit = hitTest(x, y);
     if (!hit) return;
-
     if (hit.kind === 'point') {
       showDetails(hit.ev);
     } else if (hit.kind === 'cluster') {
@@ -754,13 +753,63 @@ function wireCanvasInteractions() {
     }
   });
 
-  // HOVER → pointer cursor
-  canvas.addEventListener('mousemove', (e) => {
-    const { x, y } = getCanvasCssPos(e);
-    const hit = hitTest(x, y);
-    canvas.style.cursor = hit ? 'pointer' : 'default';
+  // Ensure mobile browsers don’t scroll/zoom the page when we drag over the canvas
+  canvas.style.touchAction = 'none';
+
+  // --- DRAG/PAN state ---
+  let isDragging = false;
+  let dragStartX = 0;
+  let dragStartPanX = 0;
+
+  // Begin dragging (finger down / mouse down)
+  canvas.addEventListener('pointerdown', (e) => {
+    // For mouse, only react to the primary button
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+
+    const { x } = getCanvasCssPos(e);
+    isDragging = true;
+    dragStartX = x;
+    dragStartPanX = panX;
+
+    // Capture pointer so we still receive move events even if it leaves the canvas
+    if (canvas.setPointerCapture) canvas.setPointerCapture(e.pointerId);
+
+    canvas.classList.add('dragging');
+    e.preventDefault();
   });
+
+  // Move / hover
+  canvas.addEventListener('pointermove', (e) => {
+    const { x, y } = getCanvasCssPos(e);
+
+    if (isDragging) {
+      const dx = x - dragStartX;     // CSS px delta from drag start
+      panX = dragStartPanX + dx;     // update pan
+      draw();                        // redraw timeline
+      e.preventDefault();
+      return;
+    }
+
+    // Not dragging → show hover pointer when over interactive shapes
+    const hit = hitTest(x, y);
+    canvas.style.cursor = hit ? 'pointer' : 'grab';
+  });
+
+  // End dragging
+  const endDrag = (e) => {
+    if (!isDragging) return;
+    isDragging = false;
+    canvas.classList.remove('dragging');
+    if (canvas.releasePointerCapture) canvas.releasePointerCapture(e.pointerId);
+  };
+  canvas.addEventListener('pointerup', endDrag);
+  canvas.addEventListener('pointercancel', endDrag);
+  canvas.addEventListener('mouseleave', endDrag);
+
+  // (Optional) If you want right-click to do nothing on canvas:
+  // canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 }
+
 
 // ===== Main draw =====
 function draw() {

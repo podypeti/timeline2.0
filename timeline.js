@@ -612,6 +612,10 @@ function maxLabelWidthForScale() {
   return 160;                   // narrower at small scale
 }
 
+function ellipsizeToWidth(text, maxW) {
+  return shortenToFit(text, maxW);
+}
+
 function shortenToFit(text, maxWidth) {
   let t = text; if (!t) return '';
   if (ctx.measureText(t).width <= maxWidth) return t;

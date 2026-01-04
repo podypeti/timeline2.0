@@ -1309,34 +1309,31 @@ if (showTimePeriodsBand) {
       fillStrokeRoundedRect(bar.bx, y, bar.bw, pillH, 8, fillCol, '#00000022');
       drawHitRects.push({ kind: 'bar', ev: bar.ev, x: bar.bx, y, w: bar.bw, h: pillH });
 
+
+// ---- Label INSIDE the pill, left-aligned to the bar’s inner edge
 if (bar.title) {
+  const padL = 6;                  // left padding inside the pill
+  const padR = 6;                  // right padding inside the pill
+  const available = Math.max(0, bar.bw - (padL + padR));  // usable width inside pill
+
+  // Set font BEFORE measuring
   ctx.font = `${fontPx(14)}px sans-serif`;
   ctx.textBaseline = 'top';
+  ctx.textAlign = 'start';
 
-  if (TP_BAND_LABEL_PLACEMENT === 'inside-left') {
-    // Right-align the text so its right edge kisses the bar start (with a small gap).
-    const gap = 6;                      // pixels between text and bar
-    const maxW = 260;                   // optional: limit label width
-    const text = ellipsizeToWidth(bar.title, maxW);
-    const tx = bar.bx - gap;            // right edge of the text block
-    const ty = y + 1;                   // vertical offset like inside-pill
+  if (available >= 20) {
+    // Ellipsize to fit inside the pill
+    const text = shortenToFit(bar.title, available);
 
-    ctx.textAlign = 'right';
-    ctx.fillStyle = '#111';
-    ctx.fillText(text, tx, ty);
+    // Choose legible color: for very short/narrow pills, keep white text; otherwise dark
+    const useLight = (available < 40);           // tweak threshold if needed
+    ctx.fillStyle = useLight ? '#fff' : '#111';
 
-  } else {
-    // ---- Default: draw title INSIDE the pill as before
-    const padL = 6, padR = 6;
-    const available = Math.max(0, bar.bw - (padL + padR));
-    if (available >= 52) {
-      const text = ellipsizeToWidth(bar.title, available);
-      ctx.textAlign = 'start';
-      ctx.fillStyle = (bar.bw < 40) ? '#fff' : '#111';
-      ctx.fillText(text, bar.bx + padL, y + 1);
-    }
+    // Draw text 1px down to visually center within the rounded rectangle
+    ctx.fillText(text, bar.bx + padL, y + 1);
   }
 }
+
     });
   });
 } // ← band block closes here

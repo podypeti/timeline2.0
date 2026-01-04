@@ -766,8 +766,8 @@ const SPRING_DAMP = 0.020;    // damping on velocity during spring (per ms); hig
   function panClampBounds() {
     const Wcss = canvas.clientWidth;
     const tlw = timelineWidthPx();
-    const minPan = -CLAMP_OVERSCROLL;
-    const maxPan = Wcss - tlw + CLAMP_OVERSCROLL;
+    const minPan = 0 - 0;
+    const maxPan = Wcss - tlw - 0;
     return { minPan, maxPan };
   }
   
@@ -982,25 +982,29 @@ function beginInertia(vxInitialPxPerMs) {
       return;
     }
 
+
+// Helpers
+function timelineWidthPx() { return (MAX_YEAR - MIN_YEAR) * scale; }
+function panClampBounds() {
+  const Wcss = canvas.clientWidth;
+  const tlw = timelineWidthPx();
+  const minPan = 0 - 0;                   // no overscroll left
+  const maxPan = Wcss - tlw - 0;          // no overscroll right
+  return { minPan, maxPan };
+}
+
+// Drag path inside pointermove:
 if (isDragging && activePointers.size === 1) {
-  const dx = pos.x - lastX;  // incremental delta in CSS px
+  const pos = getCanvasCssPos(e);
+  const dx = pos.x - lastX;   // incremental delta (CSS px)
   lastX = pos.x;
 
-  let target = panX + dx;
+  // Update pan and clamp strictly to bounds
+  panX += dx;
   const { minPan, maxPan } = panClampBounds();
-
-  if (target < minPan) {
-    const over = target - minPan;          // negative
-    panX = minPan + rubberBand(over);      // optional rubber-band
-  } else if (target > maxPan) {
-    const over = target - maxPan;          // positive
-    panX = maxPan + rubberBand(over);      // optional rubber-band
-  } else {
-    panX = target;
-  }
+  panX = Math.max(minPan, Math.min(maxPan, panX));
 
   dragMovedPx += Math.abs(dx);
-  recordMove(pos.x);        // inertia sampling
   requestDraw();
   e.preventDefault();
   return;
@@ -1472,7 +1476,7 @@ function wireUi() {
 canvas?.addEventListener('wheel', (e) => {
   e.preventDefault();
   const factor = e.deltaY < 0 ? 1.12 : 1 / 1.12;
-  const { x } = getCanvasCssPos(e);      // ✅ canvas CSS X
+  const { x } = getCanvasCssPos(e);       // ✅ correct anchor space
   zoomTo(scale * factor, x);
 }, { passive: false });
 

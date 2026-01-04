@@ -21,6 +21,19 @@ function clusterPxThreshold() {
   return 22;
 }
 
+// ===== Draw scheduler (one draw per animation frame) =====
+let _rafId = null;
+let _drawQueued = false;
+
+function requestDraw() {
+  if (_drawQueued) return;
+  _drawQueued = true;
+  _rafId = requestAnimationFrame(() => {
+    _drawQueued = false;
+    draw();
+  });
+}
+
 // ===== Band layout for "Time periods" =====
 const TP_BAND_Y = 260;                 // top Y position of the band (CSS px)
 const TP_BAND_H = 62;                  // band height
@@ -174,7 +187,7 @@ function isGroupVisible(group) {
 
 function centerOnYear(y) {
   panX = (canvas.clientWidth / 2) - ((y - MIN_YEAR) * scale);
-  draw();
+  requestDraw();
 }
 
 /**
@@ -188,7 +201,7 @@ function zoomTo(newScale, anchorCssX) {
   // If no canvas yet, just set the scale
   if (!canvas) {
     scale = clamped;
-    draw();
+    requestDraw();
     return;
   }
 
@@ -205,7 +218,7 @@ function zoomTo(newScale, anchorCssX) {
   // (keep the visual anchor fixed)
   panX += (anchorCssX - newAnchorX);
 
-  draw();
+  requestDraw();
 }
 
 /**
@@ -217,7 +230,7 @@ function resetAll() {
   initScaleAndPan();      // recompute base scale and panX from canvas size
   // Optional: restore group filters to "all" by rebuilding legend
   buildLegend();
-  draw();
+  requestDraw();
 }
 
 // ===== JDN =====
@@ -699,10 +712,6 @@ function bandDensity(barCenters) {
   return gaps / Math.max(1, sorted.length-1);
 }
 
-
-
-
-
 async function loadCsv(url) {
   const res = await fetch(url);
   console.log('[diag] CSV fetch:', res.status, res.statusText, 'url:', url);
@@ -873,7 +882,7 @@ function beginInertia(vxInitialPxPerMs) {
       return;
     }
 
-    draw();
+    requestDraw();
     inertiaRaf = requestAnimationFrame(tick);
   };
 
@@ -990,7 +999,7 @@ if (isDragging && activePointers.size === 1) {
 
   dragMovedPx += Math.abs(dx);
   recordMove(pos.x);        // inertia sampling
-  draw();
+  requestDraw();
   e.preventDefault();
   return;
 }
@@ -1047,11 +1056,9 @@ if (isDragging && activePointers.size === 1) {
 
 
 // ===== Main draw =====
-function draw() {
-  
- console.log('[diag] draw() events:',
-   Array.isArray(events) ? events.length : 'events not array');
-
+function draw() {  
+  ctx.clearRect(0, 0, W, H);
+  drawHitRects = [];
 
   // If zero, draw a hint so we can see it on canvas:
   if (!Array.isArray(events) || events.length === 0) {
@@ -1430,7 +1437,7 @@ window.addEventListener('resize', () => {
       panX = (canvas.clientWidth / 2) - ((centerYearBefore - MIN_YEAR) * scale);
     }
 
-    draw();
+        requestDraw();
   }, 80);
 });
 

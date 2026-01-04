@@ -757,9 +757,9 @@ function wireCanvasInteractions() {
   const CLAMP_PAN = true;             // set false if you prefer unlimited fling
   const CLAMP_OVERSCROLL = 240;       // px: how far beyond ends we allow
   const INERTIA_ENABLED = true;
-  const INERTIA_DECAY = 0.98;         // per ~16.7ms tick (≈0.92 → slows in ~0.8s)
+  const INERTIA_DECAY = 0.92;         // per ~16.7ms tick (≈0.92 → slows in ~0.8s)
   const INERTIA_MIN_VELOCITY = 0.02;  // px/ms: stop when slower than this
-  const INERTIA_MAX_MS_SAMPLE = 120;  // only last 120ms of movement used for velocity
+  const INERTIA_MAX_MS_SAMPLE = 200;  // only last 120ms of movement used for velocity
 
   // --- Helpers for clamping pan to bounds ---
   function timelineWidthPx() {
@@ -1310,30 +1310,35 @@ if (showTimePeriodsBand) {
       drawHitRects.push({ kind: 'bar', ev: bar.ev, x: bar.bx, y, w: bar.bw, h: pillH });
 
 
-// ---- Label INSIDE the pill, left-aligned to the bar’s inner edge
+
+// ---- Label INSIDE the pill, left-aligned to the bar’s inner edge (refined)
 if (bar.title) {
-  const padL = 6;                  // left padding inside the pill
-  const padR = 6;                  // right padding inside the pill
+  const padL = 8;                  // increased left padding for nicer look
+  const padR = 6;                  // right padding remains modest
   const available = Math.max(0, bar.bw - (padL + padR));  // usable width inside pill
 
-  // Set font BEFORE measuring
-  ctx.font = `${fontPx(14)}px sans-serif`;
-  ctx.textBaseline = 'top';
+  // Set font BEFORE measuring (important for shortenToFit)
+  const fontSize = fontPx(14);     // adaptive font helper you already have
+  ctx.font = `${fontSize}px sans-serif`;
+
+  // Vertical centering: place baseline ~middle of the pill
+  ctx.textBaseline = 'middle';
   ctx.textAlign = 'start';
 
-  if (available >= 20) {
-    // Ellipsize to fit inside the pill
+  if (available >= 24) {           // draw only if there is reasonable space
     const text = shortenToFit(bar.title, available);
 
-    // Choose legible color: for very short/narrow pills, keep white text; otherwise dark
-    const useLight = (available < 40);           // tweak threshold if needed
+    // Legibility: use darker text for wide pills; white for very narrow pills
+    const useLight = (available < 56);   // tweak threshold to taste
     ctx.fillStyle = useLight ? '#fff' : '#111';
 
-    // Draw text 1px down to visually center within the rounded rectangle
-    ctx.fillText(text, bar.bx + padL, y + 1);
+    // Compute the centerline Y of the pill
+    const cy = y + pillH / 2;
+
+    // Draw text at inner-left padding, centered vertically
+    ctx.fillText(text, bar.bx + padL, cy);
   }
 }
-
     });
   });
 } // ← band block closes here

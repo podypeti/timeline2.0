@@ -758,7 +758,7 @@ function wireCanvasInteractions() {
   const CLAMP_OVERSCROLL = 240;       // px: how far beyond ends we allow
   const INERTIA_ENABLED = true;
   const INERTIA_DECAY = 0.92;         // per ~16.7ms tick (≈0.92 → slows in ~0.8s)
-  const INERTIA_MIN_VELOCITY = 0.02;  // px/ms: stop when slower than this
+  const INERTIA_MIN_VELOCITY = 0.002;  // px/ms: stop when slower than this
   const INERTIA_MAX_MS_SAMPLE = 120;  // only last 120ms of movement used for velocity
 
   // --- Helpers for clamping pan to bounds ---

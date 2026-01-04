@@ -1048,7 +1048,7 @@ if (isDragging && activePointers.size === 1) {
 
 // ===== Main draw =====
 function draw() {
-  sizeCanvasToCss();
+  
  console.log('[diag] draw() events:',
    Array.isArray(events) ? events.length : 'events not array');
 

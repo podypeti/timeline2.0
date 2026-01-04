@@ -28,7 +28,7 @@ const TP_BAND_PAD_X = 6;               // horizontal padding inside band
 const TP_BAND_LABEL = '';  // band label text
 const TP_BAND_DRAW_BACKGROUND = false; 
 const TP_BAND_DRAW_LABEL = false;      // ← turn off the "Time periods" label
-const TP_BAND_LABEL_PLACEMENT = 'outside-left';
+const TP_BAND_LABEL_PLACEMENT = 'inside-left';
 // ===== DOM =====
 const canvas = document.getElementById('timelineCanvas');
 const ctx = canvas.getContext('2d');
@@ -1080,8 +1080,7 @@ if (bar.title) {
   ctx.font = `${fontPx(14)}px sans-serif`;
   ctx.textBaseline = 'top';
 
-  if (TP_BAND_LABEL_PLACEMENT === 'outside-left') {
-    // ---- Draw title OUTSIDE, immediately before the bar’s left edge
+  if (TP_BAND_LABEL_PLACEMENT === 'inside-left') {
     // Right-align the text so its right edge kisses the bar start (with a small gap).
     const gap = 6;                      // pixels between text and bar
     const maxW = 260;                   // optional: limit label width

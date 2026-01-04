@@ -1499,5 +1499,5 @@ document.addEventListener('DOMContentLoaded', async () => {
   wireUi();
   wireCanvasInteractions();        // ⬅️ add this line
   centerOnYear(INITIAL_CENTER_YEAR);
-  draw();
+  requestDraw();
 });

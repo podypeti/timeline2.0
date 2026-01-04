@@ -28,7 +28,7 @@ const TP_BAND_PAD_X = 6;               // horizontal padding inside band
 const TP_BAND_LABEL = '';  // band label text
 const TP_BAND_DRAW_BACKGROUND = false; 
 const TP_BAND_DRAW_LABEL = false;      // ← turn off the "Time periods" label
-const TP_BAND_LABEL_PLACEMENT = 'inside-left';
+
 // ===== DOM =====
 const canvas = document.getElementById('timelineCanvas');
 const ctx = canvas.getContext('2d');
@@ -612,9 +612,7 @@ function maxLabelWidthForScale() {
   return 160;                   // narrower at small scale
 }
 
-function ellipsizeToWidth(text, maxW) {
-  return shortenToFit(text, maxW);
-}
+
 
 function shortenToFit(text, maxWidth) {
   let t = text; if (!t) return '';
@@ -742,7 +740,7 @@ function wireCanvasInteractions() {
   if (!canvas) return;
 
   // --- CONFIG ---
-  const CLAMP_PAN = true;
+  
   const CLAMP_OVERSCROLL = 240;
   const INERTIA_ENABLED = true;
   const INERTIA_DECAY = 0.92;
@@ -761,11 +759,7 @@ const SPRING_DAMP = 0.014;    // damping on velocity during spring (per ms); hig
     const maxPan = Wcss - tlw + CLAMP_OVERSCROLL;
     return { minPan, maxPan };
   }
-  function clampPan() {
-    if (!CLAMP_PAN) return;
-    const { minPan, maxPan } = panClampBounds();
-    panX = Math.min(maxPan, Math.max(minPan, panX));
-  }
+  
   
 // Map overscroll distance to a softer (non-linear) displacement
 function rubberBand(over, softness = RB_SOFTNESS) {
@@ -1015,7 +1009,7 @@ if (isDragging && activePointers.size === 1) {
     activePointers.delete(e.pointerId);
 
     if (canvas.releasePointerCapture) {
-      try { canvas.releasePointerCapture(e.pointerId); } catch {}
+      try { canvas.releasePointerCapture(e.pointerId); } catch { /* empty */ }
     }
 
     if (pinchActive && activePointers.size < 2) {
@@ -1488,8 +1482,3 @@ document.addEventListener('DOMContentLoaded', async () => {
   centerOnYear(INITIAL_CENTER_YEAR);
   draw();
 });
-
-
-
-
-

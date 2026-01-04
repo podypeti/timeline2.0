@@ -1457,12 +1457,14 @@ function wireUi() {
   // --- (Popover REMOVED) ---
 
   // Optional: wheel zoom
-  canvas?.addEventListener('wheel', (e) => {
-    e.preventDefault();
-    const factor = e.deltaY < 0 ? 1.12 : 1 / 1.12;
-    const anchor = e.clientX;
-    zoomTo(scale * factor, anchor);
-  }, { passive: false });
+
+canvas?.addEventListener('wheel', (e) => {
+  e.preventDefault();
+  const factor = e.deltaY < 0 ? 1.12 : 1 / 1.12;
+  const { x } = getCanvasCssPos(e);      // ✅ canvas CSS X
+  zoomTo(scale * factor, x);
+}, { passive: false });
+
 }
 
   // --- Details close button ---

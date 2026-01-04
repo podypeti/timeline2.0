@@ -736,79 +736,155 @@ function hitTest(cssX, cssY) {
 }
 
 /** Wire canvas interactions (click to open details; hover cursor/tooltip). */
+
 function wireCanvasInteractions() {
   if (!canvas) return;
 
-  // Keep the existing CLICK handler (open event/cluster)
+  // CLICK → open details as before
   canvas.addEventListener('click', (e) => {
     const { x, y } = getCanvasCssPos(e);
     const hit = hitTest(x, y);
     if (!hit) return;
-    if (hit.kind === 'point') {
-      showDetails(hit.ev);
-    } else if (hit.kind === 'cluster') {
-      showClusterDetails(hit.cluster);
-    } else if (hit.kind === 'bar') {
-      showDetails(hit.ev);
-    }
+    if (hit.kind === 'point') showDetails(hit.ev);
+    else if (hit.kind === 'cluster') showClusterDetails(hit.cluster);
+    else if (hit.kind === 'bar') showDetails(hit.ev);
   });
 
-  // Ensure mobile browsers don’t scroll/zoom the page when we drag over the canvas
+  // Ensure mobile browsers don’t hijack the gesture
   canvas.style.touchAction = 'none';
 
-  // --- DRAG/PAN state ---
+  // --- DRAG (single pointer) state ---
   let isDragging = false;
   let dragStartX = 0;
   let dragStartPanX = 0;
 
-  // Begin dragging (finger down / mouse down)
+  // --- PINCH (two pointers) state ---
+  const activePointers = new Map();   // pointerId → {x, y}
+  let pinchActive = false;
+  let pinchStartDist = 0;             // CSS px distance between the two fingers at start
+  let pinchStartScale = 1;            // scale at pinch start
+
+  function getTwoPointers() {
+    if (activePointers.size < 2) return null;
+    const it = activePointers.values();
+    const p1 = it.next().value;
+    const p2 = it.next().value;
+    return [p1, p2];
+  }
+
+  function dist(p1, p2) {
+    const dx = p2.x - p1.x, dy = p2.y - p1.y;
+    return Math.hypot(dx, dy);
+  }
+
   canvas.addEventListener('pointerdown', (e) => {
-    // For mouse, only react to the primary button
+    // For mouse, only react to the primary (left) button
     if (e.pointerType === 'mouse' && e.button !== 0) return;
 
-    const { x } = getCanvasCssPos(e);
-    isDragging = true;
-    dragStartX = x;
-    dragStartPanX = panX;
+    const pos = getCanvasCssPos(e);
+    activePointers.set(e.pointerId, pos);
 
-    // Capture pointer so we still receive move events even if it leaves the canvas
+    // Capture this pointer so we keep receiving move events even outside the canvas
     if (canvas.setPointerCapture) canvas.setPointerCapture(e.pointerId);
 
-    canvas.classList.add('dragging');
+    if (activePointers.size === 1) {
+      // Start a drag
+      isDragging = true;
+      dragStartX = pos.x;
+      dragStartPanX = panX;
+      canvas.classList.add('dragging');
+    } else if (activePointers.size === 2) {
+      // Start a pinch
+      const two = getTwoPointers();
+      if (two) {
+        const [p1, p2] = two;
+        pinchActive = true;
+        pinchStartDist = Math.max(1, dist(p1, p2)); // avoid zero
+        pinchStartScale = scale;
+        isDragging = false;                          // cancel any ongoing drag
+        canvas.classList.add('dragging');
+      }
+    }
     e.preventDefault();
   });
 
-  // Move / hover
   canvas.addEventListener('pointermove', (e) => {
-    const { x, y } = getCanvasCssPos(e);
+    const pos = getCanvasCssPos(e);
+    activePointers.set(e.pointerId, pos);
 
-    if (isDragging) {
-      const dx = x - dragStartX;     // CSS px delta from drag start
-      panX = dragStartPanX + dx;     // update pan
-      draw();                        // redraw timeline
+    if (pinchActive && activePointers.size >= 2) {
+      const two = getTwoPointers();
+      if (two) {
+        const [p1, p2] = two;
+        const currDist = Math.max(1, dist(p1, p2));
+        // Zoom factor relative to start
+        const factor = currDist / pinchStartDist;
+        const newScale = pinchStartScale * factor;
+
+        // Anchor zoom under the current midpoint of the two fingers
+        const anchorCssX = (p1.x + p2.x) / 2;
+
+        // Use your existing zoom routine (keeps the anchor year fixed)
+        zoomTo(newScale, anchorCssX);
+      }
       e.preventDefault();
       return;
     }
 
-    // Not dragging → show hover pointer when over interactive shapes
-    const hit = hitTest(x, y);
+    if (isDragging && activePointers.size === 1) {
+      const dx = pos.x - dragStartX;   // CSS px delta from drag start
+      panX = dragStartPanX + dx;
+      draw();
+      e.preventDefault();
+      return;
+    }
+
+    // Hover pointer: show 'pointer' over interactive shapes, 'grab' elsewhere
+    const hit = hitTest(pos.x, pos.y);
     canvas.style.cursor = hit ? 'pointer' : 'grab';
   });
 
-  // End dragging
-  const endDrag = (e) => {
-    if (!isDragging) return;
-    isDragging = false;
-    canvas.classList.remove('dragging');
-    if (canvas.releasePointerCapture) canvas.releasePointerCapture(e.pointerId);
-  };
-  canvas.addEventListener('pointerup', endDrag);
-  canvas.addEventListener('pointercancel', endDrag);
-  canvas.addEventListener('mouseleave', endDrag);
+  function endPointer(e) {
+    activePointers.delete(e.pointerId);
 
-  // (Optional) If you want right-click to do nothing on canvas:
-  // canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+    // Release capture for this pointer
+    if (canvas.releasePointerCapture) {
+      try { canvas.releasePointerCapture(e.pointerId); } catch {}
+    }
+
+    if (pinchActive && activePointers.size < 2) {
+      // Pinch ended → maybe continue as drag with the remaining pointer
+      pinchActive = false;
+      pinchStartDist = 0;
+
+      if (activePointers.size === 1) {
+        const remaining = activePointers.values().next().value;
+        isDragging = true;
+        dragStartX = remaining.x;
+        dragStartPanX = panX;
+      } else {
+        isDragging = false;
+      }
+    } else if (isDragging && activePointers.size === 0) {
+      isDragging = false;
+    }
+
+    if (!isDragging && !pinchActive) {
+      canvas.classList.remove('dragging');
+    }
+  }
+
+  canvas.addEventListener('pointerup', endPointer);
+  canvas.addEventListener('pointercancel', endPointer);
+  canvas.addEventListener('mouseleave', (e) => {
+    // If mouse left the canvas during drag, end drag for the mouse pointer
+    if (e.pointerType === 'mouse') endPointer(e);
+  });
+
+  // Prevent right-click menu on canvas
+  canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 }
+
 
 
 // ===== Main draw =====

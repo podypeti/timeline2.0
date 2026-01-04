@@ -971,34 +971,29 @@ function beginInertia(vxInitialPxPerMs) {
       return;
     }
 
-
 if (isDragging && activePointers.size === 1) {
-  const dx = pos.x - lastX;
+  const dx = pos.x - lastX;  // incremental delta in CSS px
   lastX = pos.x;
 
-  // Provisional pan
   let target = panX + dx;
   const { minPan, maxPan } = panClampBounds();
 
   if (target < minPan) {
-    // Overscrolled to the left → soften displacement
-    const over = target - minPan; // negative
-    panX = minPan + rubberBand(over);
+    const over = target - minPan;          // negative
+    panX = minPan + rubberBand(over);      // optional rubber-band
   } else if (target > maxPan) {
-    // Overscrolled to the right
-    const over = target - maxPan; // positive
-    panX = maxPan + rubberBand(over);
+    const over = target - maxPan;          // positive
+    panX = maxPan + rubberBand(over);      // optional rubber-band
   } else {
-    panX = target;                // inside bounds: normal pan
+    panX = target;
   }
 
   dragMovedPx += Math.abs(dx);
-  recordMove(pos.x);
+  recordMove(pos.x);        // inertia sampling
   draw();
   e.preventDefault();
   return;
 }
-
 
     const hit = hitTest(pos.x, pos.y);
     canvas.style.cursor = hit ? 'pointer' : 'grab';
@@ -1419,11 +1414,22 @@ function initScaleAndPan() {
 
 // ===== Responsive =====
 
+
 let _resizeTimer = null;
 window.addEventListener('resize', () => {
   clearTimeout(_resizeTimer);
   _resizeTimer = setTimeout(() => {
-    initScaleAndPan(); // recompute base scale and pan from current width
+    // 1) Remember what year sits at the canvas center *before* resize.
+    const centerYearBefore = yearForX(canvas ? (canvas.clientWidth / 2) : 0);
+
+    // 2) Re-measure the canvas (DPR, W, H), but DO NOT reset scale/pan.
+    sizeCanvasToCss();  // sets dpr and canvas.width/height
+
+    // 3) Keep the SAME scale; only adjust pan so the same center year stays under the new center.
+    if (canvas) {
+      panX = (canvas.clientWidth / 2) - ((centerYearBefore - MIN_YEAR) * scale);
+    }
+
     draw();
   }, 80);
 });

@@ -1438,8 +1438,7 @@ window.addEventListener('resize', () => {
     if (canvas) {
       panX = (canvas.clientWidth / 2) - ((centerYearBefore - MIN_YEAR) * scale);
     }
-
-        requestDraw();
+     requestDraw();
   }, 80);
 });
 

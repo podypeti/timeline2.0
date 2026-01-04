@@ -749,7 +749,9 @@ function wireCanvasInteractions() {
   const INERTIA_MIN_VELOCITY = 0.02;
   const INERTIA_MAX_MS_SAMPLE = 120;
   const CLICK_SUPPRESS_DRAG_PX = 4; // do not treat as a click if move exceeds this
-
+const RB_SOFTNESS = 0.35;     // drag overscroll softness (0.25–0.45 feels good)
+const SPRING_K    = 0.0016;   // spring stiffness (per ms^2); higher = stronger pull
+const SPRING_DAMP = 0.014;    // damping on velocity during spring (per ms); higher = more damp
   // Helpers for clamping pan to bounds
   function timelineWidthPx() { return (MAX_YEAR - MIN_YEAR) * scale; }
   function panClampBounds() {
@@ -764,7 +766,35 @@ function wireCanvasInteractions() {
     const { minPan, maxPan } = panClampBounds();
     panX = Math.min(maxPan, Math.max(minPan, panX));
   }
+  
+// Map overscroll distance to a softer (non-linear) displacement
+function rubberBand(over, softness = RB_SOFTNESS) {
+  // Nonlinear: small overscroll feels soft, large overscroll compresses more
+  const m = Math.pow(Math.abs(over), 0.85) * softness;
+  return Math.sign(over) * m;
+}
 
+// Optional finisher: when inertia stops, gently snap back to the bound
+let springBackRaf = null;
+function cancelSpringBack() {
+  if (springBackRaf) { cancelAnimationFrame(springBackRaf); springBackRaf = null; }
+}
+function beginSpringBack(targetBoundPx) {
+  cancelSpringBack();
+  springBackRaf = requestAnimationFrame(function tick() {
+    const diff = targetBoundPx - panX;
+    // Exponential ease-out towards the bound
+    panX += diff * 0.18;      // adjust 0.12–0.24 to taste
+    if (Math.abs(diff) > 0.6) {
+      draw();
+      springBackRaf = requestAnimationFrame(tick);
+    } else {
+      panX = targetBoundPx;
+      draw();
+      cancelSpringBack();
+    }
+  });
+}
   // Velocity sampling for inertia
   let lastMoves = []; // array of {x, t}
   function recordMove(x) {
@@ -793,42 +823,69 @@ function wireCanvasInteractions() {
     if (inertiaRaf) { cancelAnimationFrame(inertiaRaf); inertiaRaf = null; }
   }
 
-  function beginInertia(vxInitialPxPerMs) {
-    if (!INERTIA_ENABLED) return;
-    inertiaVx = vxInitialPxPerMs;
-    if (Math.abs(inertiaVx) < INERTIA_MIN_VELOCITY) return;
-    inertiaActive = true;
-    inertiaLastTs = performance.now();
+function beginInertia(vxInitialPxPerMs) {
+  if (!INERTIA_ENABLED) return;
+  inertiaVx = vxInitialPxPerMs;
+  if (Math.abs(inertiaVx) < INERTIA_MIN_VELOCITY) return;
+  inertiaActive = true;
+  inertiaLastTs = performance.now();
 
-    const tick = (ts) => {
-      if (!inertiaActive) return;
-      const dt = Math.max(1, ts - inertiaLastTs);
-      inertiaLastTs = ts;
+  cancelSpringBack(); // don't fight two animations at once
 
-      panX += inertiaVx * dt;
+  const tick = (ts) => {
+    if (!inertiaActive) return;
+    const dt = Math.max(1, ts - inertiaLastTs);  // ms
+    inertiaLastTs = ts;
 
-      if (CLAMP_PAN) {
-        const { minPan, maxPan } = panClampBounds();
-        if ((panX <= minPan && inertiaVx < 0) || (panX >= maxPan && inertiaVx > 0)) {
-          panX = Math.max(minPan, Math.min(maxPan, panX));
-          cancelInertia();
-          draw();
-          return;
-        }
-      }
+    // Step pan by current velocity
+    panX += inertiaVx * dt;
 
+    const { minPan, maxPan } = panClampBounds();
+    let overscroll = 0;
+    let bound = null;
+
+    if (panX < minPan) {
+      overscroll = panX - minPan;     // negative
+      bound = minPan;
+    } else if (panX > maxPan) {
+      overscroll = panX - maxPan;     // positive
+      bound = maxPan;
+    }
+
+    if (bound != null) {
+      // Compress the overscrolled position via rubber band
+      panX = bound + rubberBand(overscroll);
+
+      // Damp outward motion more strongly so it doesn't keep pushing the edge
+      const outward = (overscroll < 0 && inertiaVx < 0) || (overscroll > 0 && inertiaVx > 0);
+      if (outward) inertiaVx *= 0.70;
+
+      // Spring acceleration back toward the bound with damping
+      // a = -k * overscroll - damp * v
+      const a = (-SPRING_K * overscroll) - (SPRING_DAMP * inertiaVx);
+      inertiaVx += a * dt;
+    } else {
+      // Inside bounds: normal friction decay
       const friction = Math.pow(INERTIA_DECAY, dt / 16.67);
       inertiaVx *= friction;
+    }
 
-      if (Math.abs(inertiaVx) < INERTIA_MIN_VELOCITY) cancelInertia();
-
-      clampPan();
+    // Stop when velocity is tiny → finish with a quick snap to bound (if any)
+    const stop = Math.abs(inertiaVx) < INERTIA_MIN_VELOCITY;
+    if (stop) {
+      inertiaActive = false;
+      if (bound != null) beginSpringBack(bound); // smooth landing
       draw();
-      inertiaRaf = requestAnimationFrame(tick);
-    };
+      return;
+    }
 
+    draw();
     inertiaRaf = requestAnimationFrame(tick);
-  }
+  };
+
+  inertiaRaf = requestAnimationFrame(tick);
+}
+  
 
   // --- POINTER STATE ---
   canvas.style.touchAction = 'none';
@@ -878,7 +935,7 @@ function wireCanvasInteractions() {
     if (canvas.setPointerCapture) canvas.setPointerCapture(e.pointerId);
 
     cancelInertia(); // any user input stops inertia
-
+    cancelSpringBack();  // NEW: cancel the spring-back finisher when user touches again
     if (activePointers.size === 1) {
       // start drag
       isDragging = true;
@@ -920,20 +977,34 @@ function wireCanvasInteractions() {
       return;
     }
 
-    if (isDragging && activePointers.size === 1) {
-      // ← incremental delta; robust even if scale changes mid-gesture
-      const dx = pos.x - lastX;
-      if (dx !== 0) {
-        panX += dx;
-        dragMovedPx += Math.abs(dx);
-        recordMove(pos.x);
-        clampPan();
-        draw();
-        lastX = pos.x; // update reference
-      }
-      e.preventDefault();
-      return;
-    }
+
+if (isDragging && activePointers.size === 1) {
+  const dx = pos.x - lastX;
+  lastX = pos.x;
+
+  // Provisional pan
+  let target = panX + dx;
+  const { minPan, maxPan } = panClampBounds();
+
+  if (target < minPan) {
+    // Overscrolled to the left → soften displacement
+    const over = target - minPan; // negative
+    panX = minPan + rubberBand(over);
+  } else if (target > maxPan) {
+    // Overscrolled to the right
+    const over = target - maxPan; // positive
+    panX = maxPan + rubberBand(over);
+  } else {
+    panX = target;                // inside bounds: normal pan
+  }
+
+  dragMovedPx += Math.abs(dx);
+  recordMove(pos.x);
+  draw();
+  e.preventDefault();
+  return;
+}
+
 
     const hit = hitTest(pos.x, pos.y);
     canvas.style.cursor = hit ? 'pointer' : 'grab';
@@ -1319,10 +1390,6 @@ if (bar.title) {
 
   if (available >= 24) {           // draw only if there is reasonable space
     const text = shortenToFit(bar.title, available);
-
-    // Legibility: use darker text for wide pills; white for very narrow pills
-    const useLight = (available < 56);   // tweak threshold to taste
-    ctx.fillStyle = useLight ? '#fff' : '#111';
 
     // Compute the centerline Y of the pill
     const cy = y + pillH / 2;

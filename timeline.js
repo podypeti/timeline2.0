@@ -1449,38 +1449,64 @@ window.addEventListener('resize', () => {
 function wireUi() {
   const canvas = document.getElementById('timelineCanvas');
   if (!canvas) return;
-  if (canvas._wiredUi) return;            // ← guard
+  if (canvas._wiredUi) return;
   canvas._wiredUi = true;
 
-  // --- Zoom buttons ---
-  const btnZoomIn = document.getElementById('zoomIn');
+  // --- Zoom buttons (unchanged) ---
+  const btnZoomIn  = document.getElementById('zoomIn');
   const btnZoomOut = document.getElementById('zoomOut');
-  const btnReset = document.getElementById('resetZoom');
-
+  const btnReset   = document.getElementById('resetZoom');
   btnZoomIn?.addEventListener('click', () => {
-    const anchor = canvas ? (canvas.clientWidth / 2) : 0;
+    const anchor = canvas.clientWidth / 2;
     zoomTo(scale * 1.3, anchor);
   });
   btnZoomOut?.addEventListener('click', () => {
-    const anchor = canvas ? (canvas.clientWidth / 2) : 0;
+    const anchor = canvas.clientWidth / 2;
     zoomTo(scale / 1.3, anchor);
   });
-  btnReset?.addEventListener('click', () => {
-    resetAll();
-  });
+  btnReset?.addEventListener('click', () => resetAll());
 
-  // --- (Popover REMOVED) ---
+  // --- Wheel behavior ---
+  const WHEEL_ZOOM_REQUIRES = 'ctrl';   // 'ctrl' | 'alt' | 'meta' | null
+  const WHEEL_PAN_SHIFT = true;         // hold Shift to pan horizontally with wheel
+  const WHEEL_PAN_SENS = 0.7;           // px per wheel delta unit
 
-  // Optional: wheel zoom
+  canvas.addEventListener('wheel', (e) => {
+    const wantsZoom =
+      (WHEEL_ZOOM_REQUIRES === 'ctrl' && e.ctrlKey) ||
+      (WHEEL_ZOOM_REQUIRES === 'alt'  && e.altKey)  ||
+      (WHEEL_ZOOM_REQUIRES === 'meta' && e.metaKey) ||
+      (WHEEL_ZOOM_REQUIRES == null); // zoom always if null (not recommended)
 
-canvas?.addEventListener('wheel', (e) => {
-  e.preventDefault();
-  const factor = e.deltaY < 0 ? 1.12 : 1 / 1.12;
-  const { x } = getCanvasCssPos(e);       // ✅ correct anchor space
-  zoomTo(scale * factor, x);
-}, { passive: false });
+    // 1) Zoom only when the modifier is held
+    if (wantsZoom) {
+      e.preventDefault(); // intercept page scroll only when zooming
+      const { x } = getCanvasCssPos(e);               // canvas CSS X anchor
+      // Smooth factor: trackpads emit small deltas; wheels emit bigger steps
+      const factor = Math.pow(1.0015, -e.deltaY);     // < 1 => zoom out, > 1 => zoom in
+      zoomTo(scale * factor, x);
+      // If you use a draw scheduler, call requestDraw() here (zoomTo may already draw)
+      return;
+    }
 
+    // 2) Optional: Shift + wheel pans horizontally in the timeline
+    if (WHEEL_PAN_SHIFT && e.shiftKey) {
+      e.preventDefault();                 // intercept page scroll while panning
+      const dx = (-e.deltaY - e.deltaX) * WHEEL_PAN_SENS; // combine for trackpads
+      panX += dx;
+      // clampPan() if you have it:
+      // const { minPan, maxPan } = panClampBounds(); panX = Math.min(maxPan, Math.max(minPan, panX));
+      // requestDraw(); // if using a scheduler
+      return;
+    }
+
+    // 3) Otherwise: DO NOT preventDefault → allow normal page scrolling
+  }, { passive: false });
 }
+
+canvas.addEventListener('pointermove', (e) => {
+  canvas.style.cursor = e.ctrlKey ? 'zoom-in' : 'grab';
+});
 
   // --- Details close button ---
   const detailsCloseBtn = document.getElementById('detailsClose');

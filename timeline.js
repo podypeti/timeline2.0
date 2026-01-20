@@ -1484,7 +1484,7 @@ function wireUi() {
 
   canvas.addEventListener('wheel', (e) => {
 
-  const wantsZoom = e.ctrlKey || /* your condition */;
+  const wantsZoom = e.ctrlKey || '';
   if (wantsZoom) {
     e.preventDefault();
     const { x } = getCanvasCssPos(e);

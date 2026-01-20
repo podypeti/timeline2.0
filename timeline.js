@@ -201,6 +201,7 @@ function zoomTo(newScale, anchorCssX) {
   // If no canvas yet, just set the scale
   if (!canvas) {
     scale = clamped;
+    viewVersion++;
     requestDraw();
     return;
   }
@@ -746,7 +747,15 @@ function hitTest(cssX, cssY) {
 
 
 function wireCanvasInteractions() {
-  if (!canvas) return;
+  
+// Click discipline
+let downPos = null;                 // { x, y } at pointerdown in canvas CSS px
+let downViewVersion = 0;            // view version snapshot at down
+let viewVersion = 0;                // increment whenever panX or scale changes
+let lastWheelTs = 0;                // timestamp of last wheel zoom
+const CLICK_SUPPRESS_DRAG_PX = 4; // do not treat as a click if move exceeds this
+const CLICK_SUPPRESS_AFTER_WHEEL_MS = 220; // ignore clicks right after wheel zoom
+if (!canvas) return;
   if (canvas._wiredInteractions) return;  // ← guard
   canvas._wiredInteractions = true;
 
@@ -756,8 +765,7 @@ function wireCanvasInteractions() {
   const INERTIA_DECAY = 0.90;
   const INERTIA_MIN_VELOCITY = 0.035;
   const INERTIA_MAX_MS_SAMPLE = 90;
-  const CLICK_SUPPRESS_DRAG_PX = 4; // do not treat as a click if move exceeds this
-  const RB_SOFTNESS = 0.28;     // drag overscroll softness (0.25–0.45 feels good)
+   const RB_SOFTNESS = 0.28;     // drag overscroll softness (0.25–0.45 feels good)
   const SPRING_K    = 0.0010;   // spring stiffness (per ms^2); higher = stronger pull
   const SPRING_DAMP = 0.020;    // damping on velocity during spring (per ms); higher = more damp
  
@@ -935,7 +943,10 @@ function beginInertia(vxInitialPxPerMs) {
     if (e.pointerType === 'mouse' && e.button !== 0) return;
 
     const pos = getCanvasCssPos(e);
-    activePointers.set(e.pointerId, pos);
+      downPos = { x: pos.x, y: pos.y };
+      downViewVersion = viewVersion;
+      dragMovedPx = 0;
+      activePointers.set(e.pointerId, pos);
 
     if (canvas.setPointerCapture) canvas.setPointerCapture(e.pointerId);
 
@@ -1472,11 +1483,16 @@ function wireUi() {
   const WHEEL_PAN_SENS = 0.7;           // px per wheel delta unit
 
   canvas.addEventListener('wheel', (e) => {
-    const wantsZoom =
-      (WHEEL_ZOOM_REQUIRES === 'ctrl' && e.ctrlKey) ||
-      (WHEEL_ZOOM_REQUIRES === 'alt'  && e.altKey)  ||
-      (WHEEL_ZOOM_REQUIRES === 'meta' && e.metaKey) ||
-      (WHEEL_ZOOM_REQUIRES == null); // zoom always if null (not recommended)
+
+  const wantsZoom = e.ctrlKey || /* your condition */;
+  if (wantsZoom) {
+    e.preventDefault();
+    const { x } = getCanvasCssPos(e);
+    const factor = Math.pow(1.0015, -e.deltaY);
+    zoomTo(scale * factor, x);
+    lastWheelTs = performance.now();  // NEW
+    return;
+  }
 
     // 1) Zoom only when the modifier is held
     if (wantsZoom) {
